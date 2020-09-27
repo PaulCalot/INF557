@@ -9,8 +9,8 @@ public class MyURL {
     public MyURL(String url){
         this.m_url = url;
         
-        boolean b1 = Pattern.matches("([a-zA-Z])*://([a-zA-Z_0-9\\.])*:([0-9])*/([a-zA-Z_0-9/\\.])*", url);
-        boolean b2 = Pattern.matches("([a-zA-Z])*://([a-zA-Z_0-9\\.])*/([a-zA-Z_0-9/\\.])*", url);
+        boolean b1 = Pattern.matches("([a-zA-Z])*://([a-zA-Z_0-9\\.])*:([0-9])*/(.)*", url);
+        boolean b2 = Pattern.matches("([a-zA-Z])*://([a-zA-Z_0-9\\.])*/(.)*", url);
         
         if(!b1 && !b2){
             throw new IllegalArgumentException(url + " is not in the right format ! It should be : <protocol>://<hostname>[:<port>]/<path>");
