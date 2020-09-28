@@ -9,15 +9,16 @@ public class MyURL {
     public MyURL(String url){
         this.m_url = url;
         
-        boolean b1 = Pattern.matches("([a-zA-Z])*://([a-zA-Z_0-9\\.])*:([0-9])*/(.)*", url);
-        boolean b2 = Pattern.matches("([a-zA-Z])*://([a-zA-Z_0-9\\.])*/(.)*", url);
+        //TODO: May be there is a way to merge the two in one
+        boolean b1 = Pattern.matches("([a-zA-Z])*://([^(/:)])*:([0-9])*/(.)*", url); // with port given
+        boolean b2 = Pattern.matches("([a-zA-Z])*://([^(/:)])*/(.)*", url); // without port given 
         
         if(!b1 && !b2){
             throw new IllegalArgumentException(url + " is not in the right format ! It should be : <protocol>://<hostname>[:<port>]/<path>");
         }
                  
         String split[] = url.split("://",2);
-       
+        
         this.m_protocol = split[0];
         split = split[1].split("/", 2);
 
