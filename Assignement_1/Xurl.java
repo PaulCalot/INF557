@@ -39,7 +39,8 @@ public class Xurl {
                 BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream())); // https://docs.oracle.com/javase/7/docs/api/java/io/InputStreamReader.html
 
                 // writing request
-                writer.print("GET " + this.my_url.getPath() + " HTTP/1.1\r\nHost: " + this.my_url.getHost()+" \r\n\r\n");
+                //System.out.println("GET " + this.my_url.getPath() + " HTTP/1.1\r\nHost: " + this.my_url.getHost()+":"+port+"\r\n\r\n");
+                writer.print("GET " + this.my_url.getPath() + " HTTP/1.1\r\nHost: " + this.my_url.getHost()+":"+port+"\r\n\r\n");
 
                 String name[] = this.my_url.getPath().split("/");
                 String name_file = (name.length == 0) ? "index" : name[name.length-1];
@@ -62,10 +63,10 @@ public class Xurl {
                 boolean b2 = false;
                 while(!(line = reader.readLine()).equals("")){
                     System.out.println(line);
-                    String split[] = line.split(":");
+                    /*String split[] = line.split(":");
                     if(split.length > 1 && split[0].equals("Content-Length") && split[1] != "0"){
                         b2 = true;
-                    }
+                    }*/
                 }
                 //System.out.println("Downloading now ... ");
                 // reading and saving file if there is one
@@ -73,12 +74,12 @@ public class Xurl {
                     writer_to_file.write(line+"\n");
                     System.out.println(line);
                 }*/
-                if(b2){
+                if(reader.ready()){
                     BufferedWriter writer_to_file =  new BufferedWriter(new FileWriter(name_file));
 
                     while(reader.ready()){
                         line = reader.readLine();
-                        writer_to_file.write(line+"\n");
+                        writer_to_file.write(line+"\r\n");
                         //System.out.println(line);
                     }
                     writer_to_file.close();
