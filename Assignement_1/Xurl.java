@@ -76,10 +76,10 @@ public class Xurl {
                 }*/
                 if(reader.ready()){
                     BufferedWriter writer_to_file =  new BufferedWriter(new FileWriter(name_file));
-
-                    while(reader.ready()){
-                        line = reader.readLine();
-                        writer_to_file.write(line+"\r\n");
+                    int character = 0;
+                    while(reader.ready() || (character = reader.read()) != -1){
+                        //line = reader.readLine();
+                        writer_to_file.write((char)character);
                         //System.out.println(line);
                     }
                     writer_to_file.close();
