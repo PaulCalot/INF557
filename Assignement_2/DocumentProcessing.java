@@ -2,6 +2,7 @@
 import java.util.regex.*;
 
 public class DocumentProcessing {
+  private static boolean debug = false;
 
   public interface URLhandler {
     void takeUrl(String url);
@@ -24,13 +25,15 @@ public class DocumentProcessing {
   public static void parseBuffer(CharSequence data) {
 
     int start = 0;
-    String line_terminators = "href((\\s)*?)=((\\s)*?)\"(.)*?\"";
-    //String line_terminators = "\\n";
-    
-    String a_href = "((<a(\\s|\\R)+?href) | (<a eer href))";
-    Pattern p = Pattern.compile("<a (.)*? href((\\s)*?)=((\\s)*?)'(.)*?'(\\s|\\R)*?(.|\\R)*?>" , Pattern.CASE_INSENSITIVE);
-    //Pattern p = Pattern.compile("<A([^<>]|\\n)*?href(\\s)*?=(\\s)*?\"(.)*?\"(.)*?>|<A([^<>]|\\n)*?href(\\s)*?=(\\s)*?'(.)*?'(.)*?>", Pattern.CASE_INSENSITIVE); // reluctant quantifiers
-    
+    String line_terminators = "\\R"; //"\\n|\\r\\n|\\r|\\u0085|\\u2028|\\u2029";
+    String anything_plus_line_terminators = "(([^>]|" + line_terminators + ")*?)";
+    String between_A_and_href = "((\\s" + anything_plus_line_terminators + "\\s)|\\s)";
+    String single_or_double_quotes_lookahead = "(\"(?=([^'\"]*?)\")|'(?=([^'\"]*?)'))";
+    //String single_or_double_quotes_behind = "((?<=\"([^']*?))\"|(?<='([^\"]*?))')"; // requires a fixed lenght here so it does not work
+    String raw_url_pattern = single_or_double_quotes_lookahead+"(.*?)"+"(\"|')"; // basically handles the "url" or 'url'
+    String href_and_spaces = "href(\\s*?)=(\\s*?)";
+    //Pattern p = Pattern.compile("<A((.|\\n)*?)href(\\s*?)=(\\s*?)\"(.*?)\"(.*?)>|<A((.|\\n)*?)href(\\s*?)=(\\s*?)\\'(.*?)\\'(.*?)>", Pattern.CASE_INSENSITIVE); // reluctant quantifiers
+    Pattern p = Pattern.compile("<A" + between_A_and_href + href_and_spaces + raw_url_pattern + anything_plus_line_terminators + ">", Pattern.CASE_INSENSITIVE); // reluctant quantifiers
 
     Matcher m = p.matcher(data);
     
@@ -39,18 +42,20 @@ public class DocumentProcessing {
       String possible_match = m.group();
       
       // Debug
-      System.out.println(" ");
-      System.out.println("Possible match in position " + Integer.toString(start) + " : " + possible_match);
-
-      Pattern p_ = Pattern.compile("href(\\s*?)=(\\s*?)(\"(?=([^']*?)\")|'(?=([^\"]*?)'))(.*?)(\"|')", Pattern.CASE_INSENSITIVE);
+      if(debug){
+        System.out.println(" ");
+        System.out.println("Possible match in position " + Integer.toString(start) + " : " + possible_match);
+      }
+      Pattern p_ = Pattern.compile(href_and_spaces+raw_url_pattern, Pattern.CASE_INSENSITIVE);
       Matcher m_ = p_.matcher(possible_match);
       if(m_.find()){ // in theory, our previous pattern made sure that what we are doing here actually works 
         // and that there is no need for other securities on the presence of certain patterns.
         String possible_url = m_.group();
         // debug
-        System.out.println("Possible url in position : " + possible_url);
-
-        possible_url = possible_url.split("=(\\s)*?(\"(?=([^']*?)\")|'(?=([^\"]*?)'))", 2)[1];
+        if(debug){  
+          System.out.println("Possible url in position : " + possible_url);
+        }
+        possible_url = possible_url.split("(?i)"+href_and_spaces+single_or_double_quotes_lookahead, 2)[1]; // not working properlyu - maybe add a condition on the second " / ' after the url
         possible_url = possible_url.substring(0,possible_url.length()-1);
         try {
           MyURL my_url = new MyURL(possible_url);
@@ -58,24 +63,27 @@ public class DocumentProcessing {
             handler.takeUrl(possible_url);
           }
           else{
-            System.out.println(possible_url + " : bad protocol.");
-          }
+            if(debug){
+              System.out.println(possible_url + " : bad protocol.");
+            }
+          } 
         }
         catch(IllegalArgumentException e){
-          System.err.println(e.getMessage());
-        }
+          if(debug){
+            System.err.println(e.getMessage());
+         }
+        } 
       }
 
       }
   }
 
   public static void main(String[] args) {
-
-//String data = "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.01 Transitional//EN\"><html><head><title>test page 1</title></head><body> <hr><A href=\"http://www.enseignement.polytechnique.fr/profs/informatique/Philippe.Chassignet/test/p2.html\">page 2</A>--<a target=\"blank_\" HREF  = 'http://www.enseignement.polytechnique.fr/profs/informatique/Philippe.Chassignet/test/p4.html' /><a href = \"http://www.enseignement.polytechnique.fr/profs/informatique/Philippe.Chassignet/test/p1.html\" id='1'>page 1 again</a><A href=\"https://www.enseignement.polytechnique.fr/profs/informatique/Philippe.Chassignet/test/p5.html\">page 5</A><hr></body></html>";
-
-    //String data = "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.01 Transitional//EN\"><html><head><title>test page 1</title></head><body> <hr><A aoeihaod \n href=\"http://www.enseignement.polytechnique.fre/Philippe.Chassignet/test/p2.html\">page 2</A>--<a target=\"blank_\" HREF  = \"http://www.enseignement.polytechnique.fr/profs/informatique/Philippe.Chassignet/test/p4.html' /><a href = \"http://www.enseignement.polytechnique.fr/profs/informatique/Philippe.Chassignet/test/p1.html\" id='1'>page 1 again</a><A href=\"https://www.enseignement.polytechnique.fr/profs/informatique/Philippe.Chassignet/test/p5.html\">page 5</A><hr></body></html>";
-    String data1 = "<a href='http://host/file.ext1'><a eer href='http://host/file.ext2'>blah</a>";
-    DocumentProcessing.parseBuffer(data1);
+    //String data = "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.01 Transitional//EN\"><html><head><title>test page 1</title></head><body> <hr><A aoeihaod \n href=\"http://www.enseignement.polytechnique.fre/Philippe.Chassignet/test/p2.html\">page 2</A>--<a target=\"blank_\" HREF  = 'http://www.enseignement.polytechnique.fr/profs/informatique/Philippe.Chassignet/test/p4.html' /><a href = \"http://www.enseignement.polytechnique.fr/profs/informatique/Philippe.Chassignet/test/p1.html\" id='1'>page 1 again</a><A href=\"https://www.enseignement.polytechnique.fr/profs/informatique/Philippe.Chassignet/test/p5.html\">page 5</A><hr></body></html>";
+    if(debug){
+      String data = "<a href='http://host/file.ext1'><a href='http://host/file.ext2'>blah</a>";
+      DocumentProcessing.parseBuffer(data);
+    }
   }
 }
 
