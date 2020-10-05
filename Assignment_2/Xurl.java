@@ -10,7 +10,8 @@ public class Xurl {
 
   public static final boolean SAVE_FILE = true;
 
-  public static void save(StringBuilder buffer, String path) throws FileNotFoundException {
+  public static void save(StringBuilder buffer, String path)
+      throws FileNotFoundException {
     String fileName = null;
     if (path.isEmpty())
       fileName = "index";
