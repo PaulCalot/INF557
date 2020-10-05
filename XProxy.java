@@ -3,39 +3,129 @@ import java.io.*;
 import javax.net.ssl.SSLSocketFactory;
 import javax.net.SocketFactory;
 import java.util.regex.*;
-import java.lang.Exception;
 
 public class Xurl extends MyURL {
-    Xurl(String url) {
+    Xurl(String url, String proxy_name, int port) {
         super(url);
-        try{
-        String new_url = road_to_200_or_400(url); 
-        MyURL url_temp = new MyURL(new_url);
-        download(new_url, url_temp);
-        }
-        catch(Exception e){
-        //    System.err.println(e.getMessage());
-        }
+        String true_proxy = proxy_verification(proxy_name, port);
+        String new_url = proxy_road_to_200_or_400(url); 
+        proxy_download(new_url);
     } 
+    
+    public String proxy_verification(String proxy_name, int port) {
+        Pattern p;
+        Matcher m;
+        String proxy = "http://";
+
+//        if(port == -1) port = 80;
+        
+        if(proxy_name.indexOf("/")!=-1 || proxy_name.indexOf(":") != -1 or proxy_name){
+            System.out.println("Invalid proxy!!");
+            return null;
+        }
+
+        if(port != -1){
+            proxy.concat(":");
+            proxy.concat(Integer.toString(port));
+        }
+        proxy.concat("/");
+
+        Socket s;
+        PrintStream out;
+        BufferedReader in;
+
+        String line;
+        int status_code;
+
+        MyURL url_temp;
+
+        try{
+            while(true) // Follow_redirection
+            {
+                url_temp = new MyURL(proxy);
+
+                if(url_temp.getProtocol().equals("https")) // Creation of a SSLSocket
+                {
+                    SocketFactory sslsockf = SSLSocketFactory.getDefault();
+                    if(url_temp.getPort()==-1) // We use the default port for https: 443
+                    {
+                        s = sslsockf.createSocket(url_temp.getHost(), 443);
+                    }
+                    else  
+                        s = sslsockf.createSocket(url_temp.getHost(), url_temp.getPort()); 
+                }
+                else
+                {
+                    if(url_temp.getPort() == -1)
+                        s = new Socket(url_temp.getHost(), 80);
+                    else
+                        s = new Socket(url_temp.getHost(), url_temp.getPort());
+                }
+            
+                out = new PrintStream(s.getOutputStream());
+                in = new BufferedReader(new InputStreamReader(s.getInputStream()));
+             
+                // Follow the HTTP protocol of GET <path> HTTP/1.0 followed by an empty line
+                out.print( "GET " + url_temp.getPath() + " HTTP/1.1\r\n" );
+                out.print( "Host: " + url_temp.getHost() + "\r\n" );
+                out.print("\r\n");
+
+                // status_code retrieval
+                line = in.readLine();
+                p = Pattern.compile("\\d{3}");
+                m = p.matcher(line);
+                m.find();
+                status_code = Integer.parseInt(line.substring(m.start(), m.end()));
+
+                if(status_code == 301 || status_code == 302) {
+                    // redirection following
+                    p = Pattern.compile("Location: ");
+                    m = p.matcher(line);
+                    while(!p.matcher(line).find()) line = in.readLine();
+                    m = p.matcher(line);
+                    m.find();
+
+                    // In case of the path of our new url is an empty string
+                    if(line.charAt(line.length()-1) != '/' && line.split("/").length==3)
+                        redirect_url = line.substring(m.end())+"/";
+                    else
+                        redirect_url = line.substring(m.end());
+                }
+                else {
+                    in.close();
+                    out.close();
+                    s.close();
+                    break;
+                }
+            }
+        }
+        catch(Exception e){}
+        return redirect_url;
+    }
+
 
 
     public void download(String new_url, MyURL url_temp) {
-        try{
-            Pattern content_length, chunked, p;
+        try {
+            Pattern p;
             Matcher m;
             Socket s;
-            int content = -1;
-
             if(url_temp.getProtocol().equals("https")) // Creation of a SSLSocket
             {
                 SocketFactory sslsockf = SSLSocketFactory.getDefault();
-                if(url_temp.getPort()==-1) s = sslsockf.createSocket(url_temp.getHost(), 443);
-                else s = sslsockf.createSocket(url_temp.getHost(), url_temp.getPort()); 
+                if(url_temp.getPort()==-1) // We use the default port for https: 443
+                {
+                    s = sslsockf.createSocket(url_temp.getHost(), 443);
+                }
+                else  
+                    s = sslsockf.createSocket(url_temp.getHost(), url_temp.getPort()); 
             }
             else
             {
-                if(url_temp.getPort() == -1) s = new Socket(url_temp.getHost(), 80);
-                else s = new Socket(url_temp.getHost(), url_temp.getPort());
+                if(url_temp.getPort() == -1)
+                    s = new Socket(url_temp.getHost(), 80);
+                else
+                    s = new Socket(url_temp.getHost(), url_temp.getPort());
             }
             
             PrintStream out;
@@ -48,11 +138,11 @@ public class Xurl extends MyURL {
             out.print( "Host: " + url_temp.getHost() + "\r\n" );
             out.print("\r\n");
             
-            
+            String line = in.readLine();
+            int content = -1;
+            Pattern content_length, chunked;
             content_length = Pattern.compile("Content-Length: ");
             chunked = Pattern.compile("Transfer-Encoding: chunked");
-
-            String line = in.readLine();
 
             while(line.length() != 0){
                 if(content_length.matcher(line).find()){
@@ -66,7 +156,9 @@ public class Xurl extends MyURL {
                 line = in.readLine();
             }
 
-            if(content == 0) System.out.println("Error, your url is invalid. Please verify it.");
+            if(content == 0){
+                System.out.println("Error, your url is invalid. Please verify it.");
+            }
             else{
                 String filename;
                 File f;
@@ -81,7 +173,6 @@ public class Xurl extends MyURL {
                 BufferedInputStream input = new BufferedInputStream(s.getInputStream());
                 byte[] str2bytes;
             
-                
                 if(content == -2){
                     line = in.readLine();
                     int chunck_size = Integer.parseInt(line, 16);
@@ -132,27 +223,25 @@ public class Xurl extends MyURL {
             in.close();
             out.close();
         }
-        catch(Exception e){
-        //    System.err.println(e.getMessage());
-        }
+        catch(Exception e){}
     }
 
     
     public String road_to_200_or_400(String website) {
-        try {
-            Pattern p;
-            Matcher m;
+        Pattern p;
+        Matcher m;
 
-            Socket s;
-            PrintStream out;
-            BufferedReader in;
+        Socket s;
+        PrintStream out;
+        BufferedReader in;
 
-            String line;
-            int status_code;
+        String line;
+        int status_code;
 
-            String redirect_url = website;
-            MyURL url_temp;
+        String redirect_url = website;
+        MyURL url_temp;
 
+        try{
             while(true) // Follow_redirection
             {
                 url_temp = new MyURL(redirect_url);
@@ -211,20 +300,13 @@ public class Xurl extends MyURL {
                     break;
                 }
             }
-            return redirect_url;
         }
-        catch(Exception e){
-            return null;
-        }
+        catch(Exception e){}
+        return redirect_url;
     }
 
 
-    public static void main(String[] args) {
-        try{
-            Xurl wget = new Xurl(args[0]);
-        }
-        catch(Exception e){
-  //          System.err.println(e.getMessage());
-        }
+    public static void main(String[] args) throws Exception {
+        Xurl wget = new Xurl(args[0]);
     }
 }
