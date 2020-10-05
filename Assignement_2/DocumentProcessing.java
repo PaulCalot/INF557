@@ -1,6 +1,5 @@
+// Paul Calot && Philippe SAGBO
 import java.util.regex.*;
-
-//import jdk.nashorn.internal.runtime.regexp.joni.Regex;
 
 public class DocumentProcessing {
 
@@ -25,15 +24,13 @@ public class DocumentProcessing {
   public static void parseBuffer(CharSequence data) {
 
     int start = 0;
-<<<<<<< HEAD
-
-    Pattern p = Pattern.compile("<A([^<>]|\\n)*?href(\\s)*?=(\\s)*?\"(.)*?\"(.)*?>|<A([^<>]|\\n)*?href(\\s)*?=(\\s)*?'(.)*?'(.)*?>", Pattern.CASE_INSENSITIVE); // reluctant quantifiers
-=======
-    String line_terminators = "\\n|\\r\\n|\\r|\\u0085|\\u2028|\\u2029";
+    String line_terminators = "href((\\s)*?)=((\\s)*?)\"(.)*?\"";
+    //String line_terminators = "\\n";
     
-    //Pattern p = Pattern.compile("<A((.|\\n)*?)href(\\s*?)=(\\s*?)\"(.*?)\"(.*?)>|<A((.|\\n)*?)href(\\s*?)=(\\s*?)\\'(.*?)\\'(.*?)>", Pattern.CASE_INSENSITIVE); // reluctant quantifiers
-    Pattern p = Pattern.compile("<A((\\s((.|" + line_terminators + ")*?)\\s)|\\s)href(\\s*?)=(\\s*?)(\"(?=([^']*?)\")|'(?=([^\"]*?)'))(.*?)(\"|')((.|" + line_terminators + ")*?)>", Pattern.CASE_INSENSITIVE); // reluctant quantifiers
->>>>>>> c4f0e02089e16c4a6e447ac958218dd6d7341be4
+    String a_href = "((<a(\\s|\\R)+?href) | (<a eer href))";
+    Pattern p = Pattern.compile("<a (.)*? href((\\s)*?)=((\\s)*?)'(.)*?'(\\s|\\R)*?(.|\\R)*?>" , Pattern.CASE_INSENSITIVE);
+    //Pattern p = Pattern.compile("<A([^<>]|\\n)*?href(\\s)*?=(\\s)*?\"(.)*?\"(.)*?>|<A([^<>]|\\n)*?href(\\s)*?=(\\s)*?'(.)*?'(.)*?>", Pattern.CASE_INSENSITIVE); // reluctant quantifiers
+    
 
     Matcher m = p.matcher(data);
     
@@ -45,11 +42,7 @@ public class DocumentProcessing {
       System.out.println(" ");
       System.out.println("Possible match in position " + Integer.toString(start) + " : " + possible_match);
 
-<<<<<<< HEAD
-      Pattern p_ = Pattern.compile("href(\\s)*?=(\\s)*?\'(.)*?\'");
-=======
       Pattern p_ = Pattern.compile("href(\\s*?)=(\\s*?)(\"(?=([^']*?)\")|'(?=([^\"]*?)'))(.*?)(\"|')", Pattern.CASE_INSENSITIVE);
->>>>>>> c4f0e02089e16c4a6e447ac958218dd6d7341be4
       Matcher m_ = p_.matcher(possible_match);
       if(m_.find()){ // in theory, our previous pattern made sure that what we are doing here actually works 
         // and that there is no need for other securities on the presence of certain patterns.
@@ -77,13 +70,12 @@ public class DocumentProcessing {
   }
 
   public static void main(String[] args) {
-<<<<<<< HEAD
-String data = "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.01 Transitional//EN\"><html><head><title>test page 1</title></head><body> <hr><A href=\"http://www.enseignement.polytechnique.fr/profs/informatique/Philippe.Chassignet/test/p2.html\">page 2</A>--<a target=\"blank_\" HREF  = 'http://www.enseignement.polytechnique.fr/profs/informatique/Philippe.Chassignet/test/p4.html' /><a href = \"http://www.enseignement.polytechnique.fr/profs/informatique/Philippe.Chassignet/test/p1.html\" id='1'>page 1 again</a><A href=\"https://www.enseignement.polytechnique.fr/profs/informatique/Philippe.Chassignet/test/p5.html\">page 5</A><hr></body></html>";
-=======
+
+//String data = "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.01 Transitional//EN\"><html><head><title>test page 1</title></head><body> <hr><A href=\"http://www.enseignement.polytechnique.fr/profs/informatique/Philippe.Chassignet/test/p2.html\">page 2</A>--<a target=\"blank_\" HREF  = 'http://www.enseignement.polytechnique.fr/profs/informatique/Philippe.Chassignet/test/p4.html' /><a href = \"http://www.enseignement.polytechnique.fr/profs/informatique/Philippe.Chassignet/test/p1.html\" id='1'>page 1 again</a><A href=\"https://www.enseignement.polytechnique.fr/profs/informatique/Philippe.Chassignet/test/p5.html\">page 5</A><hr></body></html>";
+
     //String data = "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.01 Transitional//EN\"><html><head><title>test page 1</title></head><body> <hr><A aoeihaod \n href=\"http://www.enseignement.polytechnique.fre/Philippe.Chassignet/test/p2.html\">page 2</A>--<a target=\"blank_\" HREF  = \"http://www.enseignement.polytechnique.fr/profs/informatique/Philippe.Chassignet/test/p4.html' /><a href = \"http://www.enseignement.polytechnique.fr/profs/informatique/Philippe.Chassignet/test/p1.html\" id='1'>page 1 again</a><A href=\"https://www.enseignement.polytechnique.fr/profs/informatique/Philippe.Chassignet/test/p5.html\">page 5</A><hr></body></html>";
-    String data = "<a href='http://host/file.ext1'><a href='http://host/file.ext2'>blah</a>";
->>>>>>> c4f0e02089e16c4a6e447ac958218dd6d7341be4
-    DocumentProcessing.parseBuffer(data);
+    String data1 = "<a href='http://host/file.ext1'><a eer href='http://host/file.ext2'>blah</a>";
+    DocumentProcessing.parseBuffer(data1);
   }
 }
 
