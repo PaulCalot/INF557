@@ -27,7 +27,7 @@ public class DocumentProcessing {
   public static void parseBuffer(CharSequence data) {
 
     int start = 0;
-    String line_terminators = "\\n|\\r\\n|\\r|\\u0085|\\u2028|\\u2029";
+    String line_terminators = "\\R"; //"\\n|\\r\\n|\\r|\\u0085|\\u2028|\\u2029";
     String anything_plus_line_terminators = "(([^>]|" + line_terminators + ")*?)";
     String between_A_and_href = "((\\s" + anything_plus_line_terminators + "\\s)|\\s)";
     String single_or_double_quotes_lookahead = "(\"(?=([^'\"]*?)\")|'(?=([^'\"]*?)'))";
