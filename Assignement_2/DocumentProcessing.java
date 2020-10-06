@@ -79,7 +79,7 @@ public class DocumentProcessing {
 
       }
   }
-
+  
   public static void main(String[] args) {
     //String data = "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.01 Transitional//EN\"><html><head><title>test page 1</title></head><body> <hr><A aoeihaod \n href=\"http://www.enseignement.polytechnique.fre/Philippe.Chassignet/test/p2.html\">page 2</A>--<a target=\"blank_\" HREF  = 'http://www.enseignement.polytechnique.fr/profs/informatique/Philippe.Chassignet/test/p4.html' /><a href = \"http://www.enseignement.polytechnique.fr/profs/informatique/Philippe.Chassignet/test/p1.html\" id='1'>page 1 again</a><A href=\"https://www.enseignement.polytechnique.fr/profs/informatique/Philippe.Chassignet/test/p5.html\">page 5</A><hr></body></html>";
     if(debug){
