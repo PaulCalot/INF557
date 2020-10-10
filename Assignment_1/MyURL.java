@@ -1,66 +1,118 @@
-public class MyURL {
-    String protocol, hostname, path;
-    int port = -1;
+// https://docs.oracle.com/javase/7/docs/api/java/util/regex/Pattern.html (pour les Pattern)
+import java.util.regex.*;
 
-    MyURL(String url){
-        String temp;
-        String[] tab = url.split("/");
+public class MyURL { 
+
+    private String m_url,  m_protocol, m_host, m_path;
+    private int m_port;
+
+    public MyURL(String url){
+        this.m_url = url;
         
-        if(tab.length==1){
-            throw new IllegalArgumentException("This string cannot be parsed. \nA valid URL is of the following form: <protocol>://<hostname>[:<port>]/<path>");
-        }
+        //TODO: May be there is a way to merge the two in one
+        boolean b1 = Pattern.matches("([a-zA-Z])*://([^(/:)])*:([0-9])*/(.)*", url); // with port given
+        boolean b2 = Pattern.matches("([a-zA-Z])*://([^(/:)])*/(.)*", url); // without port given 
         
-        if(url.indexOf("://")==-1){
-            throw new IllegalArgumentException("This string doesn't contain any protocol. \nA valid URL is of the following form: <protocol>://<hostname>[:<port>]/<path>");
+        if(!b1 && !b2){
+            throw new IllegalArgumentException(url + " is not in the right format ! It should be : <protocol>://<hostname>[:<port>]/<path>");
         }
-        protocol = tab[0].split(":")[0];
+                 
+        String split[] = url.split("://",2);
+        
+        this.m_protocol = split[0];
+        split = split[1].split("/", 2);
 
-        temp = url.substring(protocol.length()+3); // Remove the protocol and the "://" from the url
+        this.m_path = "/" + split[1];
 
-        if(temp.indexOf("/")==-1){
-            throw new IllegalArgumentException("This string doesn't contain any path. \nA valid URL is of the following form: <protocol>://<hostname>[:<port>]/<path>");
+        split = split[0].split(":",2);
+
+        this.m_host = split[0];
+        
+        if(split.length == 1){
+            this.m_port = -1;
         }
-
-        if((temp.indexOf(":") != -1) && (temp.indexOf(":") < temp.indexOf("/"))){
-            // If there is a ":" character and it is located before a "/"
-            // we verify that we have a valid number (an positive integer)
-            try {
-                port = Integer.parseInt(temp.substring(temp.indexOf(":")+1).split("/")[0]);
-                hostname = temp.split(":")[0];
-            }
-            catch (NumberFormatException e){
-                throw new IllegalArgumentException("This port of your string is not a decimal number. \nA valid URL is of the following form: <protocol>://<hostname>[:<port>]/<path>");
-            }
+        else{
+            this.m_port = Integer.parseInt(split[1]);
         }
-        else 
-            hostname = temp.split("/")[0];
-
-        path = temp.substring(temp.indexOf("/")); // Remove the protocol and the "://" from the url
-    }
-    
-    public int getPort(){
-        return port;
-    }
-
-    public String getHost(){
-        return hostname;
     }
 
     public String getProtocol(){
-        return protocol;
+        return this.m_protocol;
     }
-
+    public String getHost(){
+        return this.m_host;
+    }
+    public int getPort(){
+        return this.m_port;
+    }
     public String getPath(){
-        return path;
+        return this.m_path;
     }
 
-    /*
-    public static void main(String[] args){
-        MyURL url = new MyURL(args[0]);
-        System.out.println("Protocol: " + url.getProtocol());
-        System.out.println("Hostname: " + url.getHost());
-        System.out.println("Port: " + url.getPort());
-        System.out.println("Path: " + url.getPath());
+    public String getURL(){
+        return this.m_url;
+    }
 
-    }*/
+    public static void main(String[] args) {
+
+        MyURL url = new MyURL("http://www.google.com/");
+
+        System.out.print("Starting test on " + url.getURL() + "     ");
+
+        String url_protocol = url.getProtocol();
+        String url_Host = url.getHost();
+        int url_Port = url.getPort();
+        String url_getPath = url.getPath();
+
+        if(!url_protocol.equals("http")){
+            System.out.println("Wrong protocol, got '" + url_protocol + "'.");
+            return;
+        }
+
+        if(!url_Host.equals("www.google.com")){
+            System.out.println("Wrong host : "+url_Host);
+            return;
+        }
+
+        if(url_Port != -1){
+            System.out.println("Wrong port : " + Integer.toString(url_Port));
+            return;
+        }
+
+        if(!url_getPath.equals("/")){
+            System.out.println("Wrong path : " + url_getPath);
+            return;
+        }
+        System.out.println("[OK]");
+
+        url = new MyURL("http://localhost:8888/tree/");
+
+        System.out.print("Starting test on " + url.getURL() + "     ");
+
+        url_protocol = url.getProtocol();
+        url_Host = url.getHost();
+        url_Port = url.getPort();
+        url_getPath = url.getPath();
+
+        if(!url_protocol.equals("http")){
+            System.out.println("Wrong protocol, got '" + url_protocol + "'.");
+            return;
+        }
+
+        if(!url_Host.equals("localhost")){
+            System.out.println("Wrong host : "+url_Host);
+            return;
+        }
+
+        if(url_Port != 8888){
+            System.out.println("Wrong port : " + Integer.toString(url_Port));
+            return;
+        }
+
+        if(!url_getPath.equals("/tree/")){
+            System.out.println("Wrong path : " + url_getPath);
+            return;
+        }
+        System.out.println("[OK]");
+    }
 }
