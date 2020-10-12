@@ -60,9 +60,9 @@ public class Wget {
 
   @SuppressWarnings("unused")
   public static void multiThreadedDownload(String initialURL) {
-
+    final long initialThreadNumber = Thread.activeCount();
     final SynchronizedListQueue queue = new SynchronizedListQueue();
-    final HashSet<String> seen = new HashSet<String>();
+    final MyHashSet<String> seen = new MyHashSet<String>();
     final long delay = 1000;
     final boolean debug = false;
     // defines a new URLhandler
@@ -70,20 +70,15 @@ public class Wget {
       // this method will be called for each matched url
       @Override
       public void takeUrl(String url) {
-      // to be completed at exercise 2
-      if(seen.add(url)){
-        queue.enqueue(url);
+        // to be completed at exercise 2
+        if(seen.add(url)){
+          queue.enqueue(url);
         }
       }
     };
     queue.enqueue(initialURL);
     seen.add(initialURL);
     do{
-      if(debug)System.out.print(" Queue size / active count : ");
-      if(debug)System.out.print(queue.getSize());
-      if(debug)System.out.print(" / ");
-      if(debug)System.out.println(Thread.activeCount());
-
       try {
         Thread t = new Thread(new Producer(queue.dequeue()));
         t.start();
@@ -97,7 +92,7 @@ public class Wget {
           if(debug)System.err.println(e2.getMessage());
         }
     }
-    }while((Thread.activeCount()>1) || !queue.isEmpty());
+    }while((Thread.activeCount()>initialThreadNumber) || !queue.isEmpty());
   }
 
 
@@ -158,3 +153,12 @@ class Producer implements Runnable {
 		DocumentProcessing.parseBuffer(data); // seek new urls and call takeURL on them
   }
 }
+
+class MyHashSet<E> extends HashSet<E> {
+  @Override public synchronized boolean add(Object o) {
+    return super.add((E) o);
+  }
+}
+
+
+
