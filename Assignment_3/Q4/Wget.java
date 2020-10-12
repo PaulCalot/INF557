@@ -242,7 +242,11 @@ class ProducerPool implements Runnable {
       }
       
       String url = m_queue.dequeue(); // the thread may be force to wait in the given dequeue function
-      if(url.equals("**STOP**")){
+      /*if(url.equals("**STOP**")){ 
+        Thread.currentThread().interrupt();
+        break;
+      }*/
+      if(Thread.currentThread().isInterrupted()){
         Thread.currentThread().interrupt();
         break;
       }
