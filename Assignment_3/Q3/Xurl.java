@@ -13,10 +13,12 @@ public class Xurl {
   public static void save(StringBuilder buffer, String path)
       throws FileNotFoundException {
     String fileName = null;
-    if (path.isEmpty())
+    if (path.equals("/"))
       fileName = "index";
     else {
       String[] names = path.split("/");
+//      System.out.println("path: " + path);
+//      System.out.println("names: " + names[names.length-1]);
       fileName = names[names.length - 1];
     }
     PrintWriter file;

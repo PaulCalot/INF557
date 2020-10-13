@@ -7,7 +7,7 @@ import java.util.NoSuchElementException;
  * Basic implementation with a LinkedList.
  */
 public class BlockingListQueue implements URLQueue {
-  private boolean debug = false;
+  private boolean debug = true;
   private final LinkedList<String> queue;
 
   public BlockingListQueue() {
@@ -49,7 +49,7 @@ public class BlockingListQueue implements URLQueue {
       String head = this.queue.remove();
       if(head.equals("**STOP**")){
         if(debug){
-          System.err.println(Thread.currentThread().toString()+" has been interrupted.");
+          System.err.println(Thread.currentThread().toString()+" has been interrupted (in-band).");
         }
         Thread.currentThread().interrupt();
       }
@@ -57,7 +57,7 @@ public class BlockingListQueue implements URLQueue {
      }
     catch(InterruptedException e){
       if(debug){
-        System.err.println(Thread.currentThread().toString()+" has been interrupted.");
+        System.err.println(Thread.currentThread().toString()+" has been interrupted (out-of-band).");
       }
       Thread.currentThread().interrupt();
       return "**STOP**";

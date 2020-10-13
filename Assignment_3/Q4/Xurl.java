@@ -13,7 +13,7 @@ public class Xurl {
   public static void save(StringBuilder buffer, String path)
       throws FileNotFoundException {
     String fileName = null;
-    if (path.isEmpty())
+    if (path.equals("/"))
       fileName = "index";
     else {
       String[] names = path.split("/");
