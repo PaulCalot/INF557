@@ -8,6 +8,8 @@ import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 
+
+
 public class Wget {
   static final boolean debug = true;
 
@@ -16,6 +18,7 @@ public class Wget {
     final BlockingListQueue queue = new BlockingListQueue();
     final MyHashSet seen = new MyHashSet();
     final long delay = 1000;
+    final Count count = new Count(); // count the number of thread waiting 
     Thread[] threadsList = new Thread[poolSize];
     DocumentProcessing.handler = new DocumentProcessing.URLhandler() {
       @Override
@@ -31,31 +34,22 @@ public class Wget {
     }
     DocumentProcessing.handler.takeUrl(initialURL);
     for(int k=0;k<poolSize;k++){
-      threadsList[k] = new Thread(new ProducerPool(queue, seen), String.valueOf(k));
+      threadsList[k] = new Thread(new ProducerPool(queue, seen, count), String.valueOf(k));
       threadsList[k].start();
     }
     while(true){
-      // is there a way to make sure that all this method is run at once and not interrupted by other threads 
-      // (along with queue.isEmpty())
-/*      if((getWaitingThreadsNb(threadsList)==poolSize) && queue.isEmpty()){
-        try{
-          Thread.sleep(delay);
-          if(debug){
-            System.out.println("Main thread is sleeping.");
-          }
+        if(debug){
+          System.out.println("Waiting threads : " +count.toString());
         }
-        
-        catch(InterruptedException e2){
-          if(debug)System.err.println(e2.getMessage());
-          //Thread.currentThread().interrupt();
-        }*/
-        // TODO : make sure we have the right terminaison condition
-        if((getWaitingThreadsNb(threadsList)==poolSize) && queue.isEmpty()){
+        if((count.getCount()==poolSize) && queue.isEmpty()){
           if(debug){
+            System.out.println("Waiting threads : " +count.toString());
             System.out.println("Interrupting all threads...");
           }
           for(int k=0;k<poolSize;k++){
+            if(debug) System.out.print(threadsList[k] + " is " + threadsList[k].getState());
             threadsList[k].interrupt();
+            if(debug) System.out.println(threadsList[k] + " just got interrupted.");
             try{
               threadsList[k].join();
             }
@@ -63,7 +57,6 @@ public class Wget {
           }
           break;
         }
-//      }
     }
   }
 
@@ -81,27 +74,45 @@ public class Wget {
     }
     threadPoolDownload(Integer.parseInt(args[0]), args[1]);
   }
-
 }
 
-
-
+class Count {
+  private int m_count;
+  public Count(){
+    m_count = 0;
+  }
+  public synchronized void incrementCount(){
+    this.m_count+=1;
+  }
+  public synchronized void decrementCount(){
+    this.m_count-=1;
+  }
+  public synchronized String toString(){
+    return Integer.toString(this.m_count);
+  }
+  public synchronized int getCount(){
+    return this.m_count;
+  }
+}
 
 class ProducerPool implements Runnable {
   private BlockingListQueue m_queue; // takeURL alrady has it
   private MyHashSet s; // takeURL alrady has it
-  private boolean debug = true;
+  private boolean debug = false;
+  private Count m_count;
 
-  public ProducerPool(BlockingListQueue queue, MyHashSet seen){
+  public ProducerPool(BlockingListQueue queue, MyHashSet seen, Count count){
     s = seen;
     m_queue = queue;
+    m_count = count;
   }
 
   public void run(){
     if(debug) System.out.println(Thread.currentThread() + " was here [+].");
     while(!Thread.currentThread().isInterrupted()){
-      
+      m_count.incrementCount();  // do we need to make it synchronized ?
       String url = m_queue.dequeue(); // the thread may be force to wait in the given dequeue function
+      m_count.decrementCount();
       if(url==null || url.equals("**STOP**")){ 
         Thread.currentThread().interrupt();
         if(debug) System.out.println(Thread.currentThread() + " was here [---].");
