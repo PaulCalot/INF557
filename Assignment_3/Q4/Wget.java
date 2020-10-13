@@ -12,10 +12,9 @@ public class Wget {
   static final boolean debug = true;
 
   public static void threadPoolDownload(int poolSize, String initialURL) {
-    final long initialThreadNumber = Thread.activeCount(); //+Integer.toLong(poolSize);
+    final long initialThreadNumber = Thread.activeCount(); 
     final BlockingListQueue queue = new BlockingListQueue();
     final MyHashSet seen = new MyHashSet();
-    final long delay = 1000;
     Thread[] threadsList = new Thread[poolSize];
     DocumentProcessing.handler = new DocumentProcessing.URLhandler() {
       @Override
@@ -35,20 +34,6 @@ public class Wget {
       threadsList[k].start();
     }
     while(true){
-      // is there a way to make sure that all this method is run at once and not interrupted by other threads 
-      // (along with queue.isEmpty())
-/*      if((getWaitingThreadsNb(threadsList)==poolSize) && queue.isEmpty()){
-        try{
-          Thread.sleep(delay);
-          if(debug){
-            System.out.println("Main thread is sleeping.");
-          }
-        }
-        
-        catch(InterruptedException e2){
-          if(debug)System.err.println(e2.getMessage());
-          //Thread.currentThread().interrupt();
-        }*/
         // TODO : make sure we have the right terminaison condition
         if((getWaitingThreadsNb(threadsList)==poolSize) && queue.isEmpty()){
           if(debug){
@@ -63,7 +48,6 @@ public class Wget {
           }
           break;
         }
-//      }
     }
   }
 
@@ -83,8 +67,6 @@ public class Wget {
   }
 
 }
-
-
 
 
 class ProducerPool implements Runnable {
@@ -113,28 +95,6 @@ class ProducerPool implements Runnable {
         break;
       }
       Xurl.download(url);
-      String filename;
-      MyURL my_url = new MyURL(url);
-      if(my_url.getPath().equals("/"))
-        filename = "index";
-      else{
-        String[] names = my_url.getPath().split("/");
-        filename = names[names.length - 1];
-      }
-      String data = "";
-      try {
-        BufferedReader reader = new BufferedReader(new FileReader(filename)); 
-        String line=reader.readLine();
-        while(line!=null){
-          data = data.concat(line);
-          line = reader.readLine();
-        }
-        reader.close();
-      } 
-      catch(IOException e){
-        System.err.println(e.getMessage());
-      }
-      DocumentProcessing.parseBuffer(data); // seek new urls and call takeURL on them
     }
     if(debug) System.out.println(Thread.currentThread() + " was here [-].");
   }
@@ -145,6 +105,4 @@ class MyHashSet extends HashSet<String> {
     return super.add(str);
   }
 }
-
-
 
