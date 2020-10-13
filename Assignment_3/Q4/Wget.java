@@ -246,11 +246,13 @@ class ProducerPool implements Runnable {
         Thread.currentThread().interrupt();
         break;
       }*/
+      
       if(Thread.currentThread().isInterrupted()){
         Thread.currentThread().interrupt();
         break;
       }
-      Xurl.download(url);
+
+      Xurl.download(url); 
       String filename;
       MyURL my_url = new MyURL(url);
       if(my_url.getPath().equals("/"))
