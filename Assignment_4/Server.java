@@ -1,3 +1,5 @@
+// Paul Calot && Philippe SAGBO
+
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.io.PrintWriter;
@@ -19,7 +21,7 @@ class Xserver {
     int delay=5000;
     String m_routeDir;
 
-    boolean DEBUG=true;
+    boolean DEBUG=false;
 
     String bad_request = "HTTP/1.1 400 Bad request\nContent-Length:-1\n";
     String welcome = "HTTP/1.1 200 OK\nContent-Length:10\n\nWelcome\n";
@@ -142,5 +144,5 @@ class Xserver {
     }
 }
 
-public class Server {
+class Server {
 }
