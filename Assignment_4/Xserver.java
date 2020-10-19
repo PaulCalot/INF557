@@ -19,17 +19,17 @@ public class Xserver {
     ServerSocket serverSocket;
     Socket clientSocket;
     int m_port;
-    int m_nb_con = 10;
-    int delay=20000*1000;
+    int m_nb_con = 5;
+    int delay=20*1000;
     String m_routeDir;
 
     boolean DEBUG=false;
 
-    String bad_request = "HTTP/1.1 400 Bad Request\r\nContent-Length: 221\r\n\r\n<!DOCTYPE html>\r\n<html lang=en>\r\n<head><title>Error response</title></head>\r\n<body>\r\n<h1>Error response</h1>\r\n<p>Error code 400.\r\n<p>Message: Bad request.\r\n<p>Error code explanation: 400 = Bad request.\r\n</body>\r\n</html>\r\n";
-    String welcome = "HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=UTF-8\r\nContent-Length: 9\r\n\r\nWelcome\r\n";
-    String not_found = "HTTP/1.1 404 Not Found\r\nContent-Length: 222\r\n\r\n<!DOCTYPE html>\r\n<html lang=en>\r\n<head><title>Error response</title></head>\r\n<body>\r\n<h1>Error response</h1>\r\n<p>Error code 404.\r\n<p>Message: Not found.\r\n<p>Error code explanation: 404 = File not found.\r\n</body>\r\n</html>\r\n";
-    String OK_status = "HTTP/1.1 200 OK\r\nContent-Type: text; charset=UTF-8\r\n";
-   // String OK_status = "HTTP/1.1 200 OK\r\n";
+    String bad_request = "HTTP/1.1 400 Bad Request\nContent-Length: 211\n\n<!DOCTYPE html>\n<html lang=en>\n<head><title>Error response</title></head>\n<body>\n<h1>Error response</h1>\n<p>Error code 400.\n<p>Message: Bad request.\n<p>Error code explanation: 400 = Bad request.\n</body>\n</html>\n";
+    String welcome = "HTTP/1.1 200 OK\nContent-Type: text/html; charset=UTF-8\nContent-Length: 8\n\nWelcome\n";
+    String not_found = "HTTP/1.1 404 Not Found\nContent-Length: 212\n\n<!DOCTYPE html>\n<html lang=en>\n<head><title>Error response</title></head>\n<body>\n<h1>Error response</h1>\n<p>Error code 404.\n<p>Message: Not found.\n<p>Error code explanation: 404 = File not found.\n</body>\n</html>\n";
+    String OK_status = "HTTP/1.1 200 OK\nContent-Type: text/html; charset=UTF-8\n";
+   // String OK_status = "HTTP/1.1 200 OK\n";
     public Xserver(int port, String routeDir){
         m_port = port;
         m_routeDir = routeDir;
@@ -41,7 +41,10 @@ public class Xserver {
         try{
             serverSocket.setSoTimeout(delay);
         }
-        catch(SocketException e){}
+        catch(SocketException e){
+            System.err.println(e.getMessage());
+            System.exit(0);
+        }
 
         while(true){
             try{
@@ -64,7 +67,7 @@ public class Xserver {
 
     void handleConnexion(Socket clientSocket) throws IOException {
         try{
-        int delay = 2000*1000;            // Here, we wait for 20 seconds between two requests from the same client
+        int delay = 200*1000;            // Here, we wait for 200 seconds between two requests from the same client
         long old_time = System.nanoTime();
 
         PrintWriter out = new PrintWriter(clientSocket.getOutputStream(), true);
@@ -115,7 +118,7 @@ public class Xserver {
                         String line = in.readLine();
                         if(DEBUG) System.out.println("line: "+ line);
 
-                        while(line != null && line.length() != 0){
+                        while(line.length() != 0){
                             line = in.readLine();
                             if(DEBUG) System.out.println(line);
                         }
@@ -124,6 +127,7 @@ public class Xserver {
                         if(DEBUG) System.out.println(PATH);
                         if(PATH.equals("/")){
                             out.print(welcome);
+                            out.flush();
                         }
                         else{
                             if(DEBUG) System.out.println("search for a file in the server");
@@ -157,6 +161,7 @@ public class Xserver {
                                     if(Charset.forName("US-ASCII").newEncoder().canEncode(line)==false){
                                         if(DEBUG) System.out.println("non-ascii is here");
                                         out.print(not_found);
+                                        out.flush();
                                         png = 1;
                                         break;
                                     }
@@ -168,16 +173,18 @@ public class Xserver {
                                     out.print(OK_status);
                                     out.print("Content-Length: " + Integer.toString(taille_data) + "\n\n");
                                     out.print(data);
+                                    out.flush();
                                 }
                                 fileReader.close();
                             }
                             catch(FileNotFoundException e){
                                 out.print(not_found);
+                                out.flush();
                             }
                         }
                     }
                 }
-                out.flush();
+//                out.flush();
                 old_time = System.nanoTime();
             }
         }
