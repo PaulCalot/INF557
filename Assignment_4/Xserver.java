@@ -12,21 +12,24 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.net.SocketException;
+import java.nio.charset.Charset;
+import java.io.EOFException;
 
-class Xserver {
+public class Xserver {
     ServerSocket serverSocket;
     Socket clientSocket;
     int m_port;
     int m_nb_con = 10;
-    int delay=20000;
+    int delay=20000*1000;
     String m_routeDir;
 
     boolean DEBUG=false;
 
-    String bad_request = "HTTP/1.1 400 Bad Request\r\nContent-Length: 202\r\n\r\n<!DOCTYPE html>\r\n<html lang=en>\r\n<head><title>Error response</title></head>\r\n<body>\r\n<h1>Error response</h1>\r\n<p>Error code 400.\r\n<p>Message: Bad request.\r\n<p>Error code explanation: 400 = Bad request.\r\n</body>\r\n</html>\r\n";
-    String welcome = "HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=UTF-8\r\nContent-Length: 7\r\n\r\nWelcome\r\n";
-    String not_found = "HTTP/1.1 404 Not Found\r\nContent-Length: 203\r\n\r\n<!DOCTYPE html>\r\n<html lang=en>\r\n<head><title>Error response</title></head>\r\n<body>\r\n<h1>Error response</h1>\r\n<p>Error code 404.\r\n<p>Message: Not found.\r\n<p>Error code explanation: 404 = File not found.\r\n</body>\r\n</html>\r\n";
-    String OK_status = "HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=UTF-8\r\n";
+    String bad_request = "HTTP/1.1 400 Bad Request\r\nContent-Length: 221\r\n\r\n<!DOCTYPE html>\r\n<html lang=en>\r\n<head><title>Error response</title></head>\r\n<body>\r\n<h1>Error response</h1>\r\n<p>Error code 400.\r\n<p>Message: Bad request.\r\n<p>Error code explanation: 400 = Bad request.\r\n</body>\r\n</html>\r\n";
+    String welcome = "HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=UTF-8\r\nContent-Length: 9\r\n\r\nWelcome\r\n";
+    String not_found = "HTTP/1.1 404 Not Found\r\nContent-Length: 222\r\n\r\n<!DOCTYPE html>\r\n<html lang=en>\r\n<head><title>Error response</title></head>\r\n<body>\r\n<h1>Error response</h1>\r\n<p>Error code 404.\r\n<p>Message: Not found.\r\n<p>Error code explanation: 404 = File not found.\r\n</body>\r\n</html>\r\n";
+    String OK_status = "HTTP/1.1 200 OK\r\nContent-Type: text; charset=UTF-8\r\n";
+   // String OK_status = "HTTP/1.1 200 OK\r\n";
     public Xserver(int port, String routeDir){
         m_port = port;
         m_routeDir = routeDir;
@@ -60,7 +63,8 @@ class Xserver {
     }
 
     void handleConnexion(Socket clientSocket) throws IOException {
-        int delay = 20*1000;            // Here, we wait for 20 seconds between two requests from the same client
+        try{
+        int delay = 2000*1000;            // Here, we wait for 20 seconds between two requests from the same client
         long old_time = System.nanoTime();
 
         PrintWriter out = new PrintWriter(clientSocket.getOutputStream(), true);
@@ -71,6 +75,8 @@ class Xserver {
         {
             while(!in.ready()){
                 if((System.nanoTime()-old_time)/1000000 > delay){
+                    in.close();
+                    out.close();
                     clientSocket.close();
                     return;
                 }
@@ -82,9 +88,12 @@ class Xserver {
                 if(DEBUG) System.out.println("Search for GET line in handle_connexion");
                 String GET_pattern ="GET (.*?) HTTP/1.1";
                 boolean b = Pattern.matches(GET_pattern, GET);
-                if(!b) {
+                if(!b)
+                {
                     out.print(bad_request);
                     out.flush();
+                    in.close();
+                    out.close();
                     clientSocket.close();
                     return;
                 }
@@ -96,6 +105,8 @@ class Xserver {
                     if(!b) {
                         out.print(bad_request);
                         out.flush();
+                        in.close();
+                        out.close();
                         clientSocket.close();
                         return;
                     }
@@ -116,17 +127,48 @@ class Xserver {
                         }
                         else{
                             if(DEBUG) System.out.println("search for a file in the server");
+                            int trailing_part = PATH.indexOf("#");
+                            int querry_parameter = PATH.indexOf("?");                         
+                            if(trailing_part != -1 && querry_parameter != -1){
+                                int min = (trailing_part < querry_parameter) ? trailing_part : querry_parameter;
+                                PATH = PATH.substring(0, min);
+                            }
+                            else if(trailing_part == -1 && querry_parameter != -1) PATH = PATH.substring(0, querry_parameter);
+                            else if(trailing_part != -1 && querry_parameter == -1) PATH = PATH.substring(0, trailing_part);
+
+                            // Now, we verify if PATH is valid
+                            PATH = PATH.trim();
+                            if(PATH.length()==0 || PATH.charAt(0) !=  '/' || PATH.charAt(1)==' '){
+                                out.print(bad_request);
+                                out.flush();
+                                in.close();
+                                out.close();
+                                clientSocket.close();
+                                return;
+                            }
                             try{
                             if(DEBUG) System.out.println(m_routeDir+PATH);
                                 BufferedReader fileReader = new BufferedReader(new FileReader(m_routeDir+PATH));
-                                out.print(OK_status);
-                                String data = "\n";
-                                do {
-                                    line =  fileReader.readLine();
+                                int taille_data = 0;
+                                String data = "";
+                                line = fileReader.readLine();
+                                int png = 0;
+                                while(line!=null){
+                                    if(Charset.forName("US-ASCII").newEncoder().canEncode(line)==false){
+                                        if(DEBUG) System.out.println("non-ascii is here");
+                                        out.print(not_found);
+                                        png = 1;
+                                        break;
+                                    }
+                                    taille_data += line.length()+1;
                                     data = data + line + "\n";
-                                } while (line != null);
-                                out.print("Content-Length: " + Integer.toString(data.length()) + "\r\n\r\n");
-                                out.print(data);
+                                    line = fileReader.readLine();
+                                }
+                                if(png==0){
+                                    out.print(OK_status);
+                                    out.print("Content-Length: " + Integer.toString(taille_data) + "\n\n");
+                                    out.print(data);
+                                }
                                 fileReader.close();
                             }
                             catch(FileNotFoundException e){
@@ -138,6 +180,10 @@ class Xserver {
                 out.flush();
                 old_time = System.nanoTime();
             }
+        }
+        }
+        catch(SocketException e){
+            System.err.println(e.getMessage());
         }
     }
 
