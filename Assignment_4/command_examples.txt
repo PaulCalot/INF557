@@ -1,0 +1,3 @@
+# examples :
+    java Xserver 8080 /home/paul/Documents/cours/3A/INF557/INF557/Assignment_4/
+

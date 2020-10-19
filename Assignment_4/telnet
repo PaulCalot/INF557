@@ -1,0 +1,10 @@
+telnet localhost 8080
+
+GET /Xserver.java HTTP/1.1
+Host: localhost:8080
+
+
+    java Xserver 8080 /home/paul/Documents/cours/3A/INF557/INF557/Assignment_4/
+
+
+GE / HTTP/1.1
