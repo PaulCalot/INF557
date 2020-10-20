@@ -20,7 +20,7 @@ public class Xserver {
     Socket clientSocket;
     int m_port;
     int m_nb_con = 5;
-    int delay=20*1000;
+    int delay=20000*1000;
     String m_routeDir;
 
     boolean DEBUG=false;
@@ -28,7 +28,7 @@ public class Xserver {
     String bad_request = "HTTP/1.1 400 Bad Request\nContent-Length: 211\n\n<!DOCTYPE html>\n<html lang=en>\n<head><title>Error response</title></head>\n<body>\n<h1>Error response</h1>\n<p>Error code 400.\n<p>Message: Bad request.\n<p>Error code explanation: 400 = Bad request.\n</body>\n</html>\n";
     String welcome = "HTTP/1.1 200 OK\nContent-Type: text/html; charset=UTF-8\nContent-Length: 8\n\nWelcome\n";
     String not_found = "HTTP/1.1 404 Not Found\nContent-Length: 212\n\n<!DOCTYPE html>\n<html lang=en>\n<head><title>Error response</title></head>\n<body>\n<h1>Error response</h1>\n<p>Error code 404.\n<p>Message: Not found.\n<p>Error code explanation: 404 = File not found.\n</body>\n</html>\n";
-    String OK_status = "HTTP/1.1 200 OK\nContent-Type: text/html; charset=UTF-8\n";
+    String OK_status = "HTTP/1.1 200 OK\nContent-Type: text/html; charset=utf-8\n";
    // String OK_status = "HTTP/1.1 200 OK\n";
     public Xserver(int port, String routeDir){
         m_port = port;
@@ -36,7 +36,10 @@ public class Xserver {
         try{
             serverSocket = new ServerSocket(m_port, m_nb_con);
         }
-        catch(IOException e){}
+        catch(IOException e){
+            System.err.println(e.getMessage());
+            System.exit(0);
+        }
 
         try{
             serverSocket.setSoTimeout(delay);
@@ -52,22 +55,26 @@ public class Xserver {
             }
             catch(SocketTimeoutException e){
                 System.err.println(e.getMessage());
-                System.exit(0);
+                break;
             }
             catch(IOException e){}
             try{
                 if(DEBUG) System.out.println("Before handle_connexion");
                 handleConnexion(clientSocket);
+                clientSocket.close();
             }
             catch(IOException e){
                 System.err.println(e.getMessage());
             }
         }
+        try{
+            serverSocket.close();
+        }
+        catch(IOException e){}
     }
 
     void handleConnexion(Socket clientSocket) throws IOException {
-        try{
-        int delay = 200*1000;            // Here, we wait for 200 seconds between two requests from the same client
+        long delay = 2000*1000;            // Here, we wait for 200 seconds between two requests from the same client
         long old_time = System.nanoTime();
 
         PrintWriter out = new PrintWriter(clientSocket.getOutputStream(), true);
@@ -76,14 +83,14 @@ public class Xserver {
         String GET;
         while(true)
         {
-            while(!in.ready()){
+/*            while(!in.ready()){
                 if((System.nanoTime()-old_time)/1000000 > delay){
                     in.close();
                     out.close();
-                    clientSocket.close();
+//                    clientSocket.close();
                     return;
                 }
-            }
+            }*/
             
             GET = in.readLine();
             if(DEBUG) System.out.println(GET);
@@ -97,7 +104,7 @@ public class Xserver {
                     out.flush();
                     in.close();
                     out.close();
-                    clientSocket.close();
+//                  clientSocket.close();
                     return;
                 }
                 else{
@@ -110,7 +117,7 @@ public class Xserver {
                         out.flush();
                         in.close();
                         out.close();
-                        clientSocket.close();
+//                        clientSocket.close();
                         return;
                     }
                     else{
@@ -147,7 +154,7 @@ public class Xserver {
                                 out.flush();
                                 in.close();
                                 out.close();
-                                clientSocket.close();
+//                                clientSocket.close();
                                 return;
                             }
                             try{
@@ -158,8 +165,9 @@ public class Xserver {
                                 line = fileReader.readLine();
                                 int png = 0;
                                 while(line!=null){
-                                    if(Charset.forName("US-ASCII").newEncoder().canEncode(line)==false){
+                                    if(Charset.forName("utf-8").newEncoder().canEncode(line)==false){
                                         if(DEBUG) System.out.println("non-ascii is here");
+                                        if(DEBUG) System.out.println(line);
                                         out.print(not_found);
                                         out.flush();
                                         png = 1;
@@ -171,7 +179,9 @@ public class Xserver {
                                 }
                                 if(png==0){
                                     out.print(OK_status);
+                                    out.flush();
                                     out.print("Content-Length: " + Integer.toString(taille_data) + "\n\n");
+                                    out.flush();
                                     out.print(data);
                                     out.flush();
                                 }
@@ -187,10 +197,11 @@ public class Xserver {
 //                out.flush();
                 old_time = System.nanoTime();
             }
-        }
-        }
-        catch(SocketException e){
-            System.err.println(e.getMessage());
+            else {
+                in.close();
+                out.close();
+                return ;
+            }
         }
     }
 
