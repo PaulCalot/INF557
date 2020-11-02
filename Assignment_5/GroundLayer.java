@@ -9,6 +9,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.ByteBuffer;
 
 public class GroundLayer {
+  private static boolean DEBUG = false;
 
   /**
    * This {@code Charset} is used to convert between our Java native String
@@ -49,9 +50,14 @@ public class GroundLayer {
             DatagramPacket UDPPacket = new DatagramPacket(recvBuffer, recvBuffer.length);
             localSocket.receive(UDPPacket);
             String recv_data = new String(UDPPacket.getData());
+
+            recv_data = recv_data.substring(0, UDPPacket.getLength()-1);
           
-            System.out.println("payload: " + recv_data.trim().length());
-            handler.handle(new Message(CONVERTER.decode(ByteBuffer.wrap(recv_data.trim().getBytes())).toString(), UDPPacket.getSocketAddress().toString()));
+            if(DEBUG) System.out.print("payload: " + recv_data.length() + " ");
+            String payload = CONVERTER.decode(ByteBuffer.wrap(recv_data.getBytes())).toString();
+
+            if(DEBUG) System.out.println(payload + " " + payload.length());
+            handler.handle(new Message(payload, UDPPacket.getSocketAddress().toString()));
           }
           catch(SocketException e){
             System.err.println(e.getMessage());
@@ -75,6 +81,7 @@ public class GroundLayer {
         byte[] sendBuffer = CONVERTER.encode(payload).array();
 
         DatagramPacket UDPPacket = new DatagramPacket(sendBuffer, sendBuffer.length, destinationAddress);
+        if(DEBUG) System.out.println(sendBuffer.length);
         localSocket.send(UDPPacket);
       }
       catch(SocketException e){

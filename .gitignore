@@ -19,7 +19,11 @@
 *.tar.gz
 *.rar
 *.jpg
+
+# OthersPhil
 *.png
+*.ipynb
+*.pickle
 
 # Swap files
 .*
