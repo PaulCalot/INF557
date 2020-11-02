@@ -9,6 +9,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.ByteBuffer;
 
 public class GroundLayer {
+  private static boolean DEBUG = false;
 
   /**
    * This {@code Charset} is used to convert between our Java native String
@@ -44,14 +45,39 @@ public class GroundLayer {
           }
         while(!Thread.currentThread().isInterrupted()){
           try{
-
             byte[] recvBuffer = new byte[1024];
             DatagramPacket UDPPacket = new DatagramPacket(recvBuffer, recvBuffer.length);
             localSocket.receive(UDPPacket);
-            String recv_data = new String(UDPPacket.getData());
+
+            String payload;
+
+            payload = new String(UDPPacket.getData(), "utf-8");
+            payload = payload.substring(0, UDPPacket.getLength());
           
-            System.out.println("payload: " + recv_data.trim().length());
-            handler.handle(new Message(CONVERTER.decode(ByteBuffer.wrap(recv_data.trim().getBytes())).toString(), UDPPacket.getSocketAddress().toString()));
+            if(UDPPacket.getLength()>=2){
+              if(payload.charAt(UDPPacket.getLength()-1) == '\0' && payload.charAt(UDPPacket.getLength()-3) == '\0'){
+                if((UDPPacket.getData()[0]==-1) && (UDPPacket.getData()[1]==-2)){
+                  if(DEBUG) System.out.println("utf-16");
+                  payload = new String(UDPPacket.getData(), "utf-16");
+                  payload = payload.substring(0, UDPPacket.getLength()/2);
+                }
+                else{
+                  if(DEBUG) System.out.println("utf-16le");
+                  payload = new String(UDPPacket.getData(), "utf-16le");
+                  payload = payload.substring(0, UDPPacket.getLength()/2);
+                }
+              }
+              else if(payload.charAt(UDPPacket.getLength()-2) == '\0' && payload.charAt(UDPPacket.getLength()-4) == '\0'){
+                if(DEBUG) System.out.println("utf-16be");
+                payload = new String(UDPPacket.getData(), "utf-16be");
+                payload = payload.substring(0, UDPPacket.getLength()/2);
+              }
+            }
+
+            if(DEBUG) System.out.print("payload: " + payload + " " + payload.length() + " ");
+            for (Handler above : handler.upsideHandlers.values())
+              above.receive(new Message(payload, UDPPacket.getSocketAddress().toString()));
+            handler.receive(new Message(payload, UDPPacket.getSocketAddress().toString()));
           }
           catch(SocketException e){
             System.err.println(e.getMessage());
@@ -72,9 +98,11 @@ public class GroundLayer {
     if (Math.random() <= RELIABILITY) {
       // MUST SEND
       try{
-        byte[] sendBuffer = CONVERTER.encode(payload).array();
+//        byte[] sendBuffer = CONVERTER.encode(payload).array();
+        byte[] sendBuffer = payload.getBytes(CONVERTER);
 
         DatagramPacket UDPPacket = new DatagramPacket(sendBuffer, sendBuffer.length, destinationAddress);
+        if(DEBUG) System.out.println(sendBuffer.length);
         localSocket.send(UDPPacket);
       }
       catch(SocketException e){
