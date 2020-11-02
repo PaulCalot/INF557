@@ -45,19 +45,39 @@ public class GroundLayer {
           }
         while(!Thread.currentThread().isInterrupted()){
           try{
-
             byte[] recvBuffer = new byte[1024];
             DatagramPacket UDPPacket = new DatagramPacket(recvBuffer, recvBuffer.length);
             localSocket.receive(UDPPacket);
-            String recv_data = new String(UDPPacket.getData());
 
-            recv_data = recv_data.substring(0, UDPPacket.getLength()-1);
+            String payload;
+
+            payload = new String(UDPPacket.getData(), "utf-8");
+            payload = payload.substring(0, UDPPacket.getLength());
           
-            if(DEBUG) System.out.print("payload: " + recv_data.length() + " ");
-            String payload = CONVERTER.decode(ByteBuffer.wrap(recv_data.getBytes())).toString();
+            if(UDPPacket.getLength()>=2){
+              if(payload.charAt(UDPPacket.getLength()-1) == '\0' && payload.charAt(UDPPacket.getLength()-3) == '\0'){
+                if((UDPPacket.getData()[0]==-1) && (UDPPacket.getData()[1]==-2)){
+                  if(DEBUG) System.out.println("utf-16");
+                  payload = new String(UDPPacket.getData(), "utf-16");
+                  payload = payload.substring(0, UDPPacket.getLength()/2);
+                }
+                else{
+                  if(DEBUG) System.out.println("utf-16le");
+                  payload = new String(UDPPacket.getData(), "utf-16le");
+                  payload = payload.substring(0, UDPPacket.getLength()/2);
+                }
+              }
+              else if(payload.charAt(UDPPacket.getLength()-2) == '\0' && payload.charAt(UDPPacket.getLength()-4) == '\0'){
+                if(DEBUG) System.out.println("utf-16be");
+                payload = new String(UDPPacket.getData(), "utf-16be");
+                payload = payload.substring(0, UDPPacket.getLength()/2);
+              }
+            }
 
-            if(DEBUG) System.out.println(payload + " " + payload.length());
-            handler.handle(new Message(payload, UDPPacket.getSocketAddress().toString()));
+            if(DEBUG) System.out.print("payload: " + payload + " " + payload.length() + " ");
+            for (Handler above : handler.upsideHandlers.values())
+              above.receive(new Message(payload, UDPPacket.getSocketAddress().toString()));
+            handler.receive(new Message(payload, UDPPacket.getSocketAddress().toString()));
           }
           catch(SocketException e){
             System.err.println(e.getMessage());
@@ -78,7 +98,8 @@ public class GroundLayer {
     if (Math.random() <= RELIABILITY) {
       // MUST SEND
       try{
-        byte[] sendBuffer = CONVERTER.encode(payload).array();
+//        byte[] sendBuffer = CONVERTER.encode(payload).array();
+        byte[] sendBuffer = payload.getBytes(CONVERTER);
 
         DatagramPacket UDPPacket = new DatagramPacket(sendBuffer, sendBuffer.length, destinationAddress);
         if(DEBUG) System.out.println(sendBuffer.length);
