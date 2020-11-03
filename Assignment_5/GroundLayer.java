@@ -50,7 +50,8 @@ public class GroundLayer {
             localSocket.receive(UDPPacket);
 
             String payload;
-
+            payload = new String(UDPPacket.getData(), 0, UDPPacket.getLength(), CONVERTER);
+            /*
             payload = new String(UDPPacket.getData(), "utf-8");
             payload = payload.substring(0, UDPPacket.getLength());
           
@@ -72,11 +73,11 @@ public class GroundLayer {
                 payload = new String(UDPPacket.getData(), "utf-16be");
                 payload = payload.substring(0, UDPPacket.getLength()/2);
               }
-            }
+            }*/
+
 
             if(DEBUG) System.out.print("payload: " + payload + " " + payload.length() + " ");
-            for (Handler above : handler.upsideHandlers.values())
-              above.receive(new Message(payload, UDPPacket.getSocketAddress().toString()));
+            
             handler.receive(new Message(payload, UDPPacket.getSocketAddress().toString()));
           }
           catch(SocketException e){
