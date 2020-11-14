@@ -30,6 +30,7 @@ public class ConnectedHandler extends Handler {
   private static final Timer TIMER = new Timer("ConnectedHandler's Timer",
       true);
 
+  private final boolean debug = false;
   private final int localId;
   private final String destination;
   private Handler aboveHandler;
@@ -78,30 +79,34 @@ public class ConnectedHandler extends Handler {
     String payload = message.payload;
     String sourceAddress = message.sourceAddress;
 
-    String[] split = payload.split(";",4);
-
-    // HELLO message
-    if(this.remoteId == -1 && split[1].equals("-1") && split[2].equals(Integer.toString(this.packetNumber)) && split[3].equals(HELLO)){
-      this.remoteId = Integer.parseInt(split[0]);
-      // in this order !!
-      this.send(ACK);
-      this.packetNumber = (this.packetNumber+1)%2;
-      // no need to notify
+    String[] split = payload.split(";");
+    if(split.length != 4){
+      if (this.debug) System.err.println("Message not corresponding to expected pattern ... " + message.toString());
     }
-    else if(this.remoteId == Integer.parseInt(split[0]) && Integer.parseInt(split[0]) == this.localId){
-      // in this case, we check if it's an acknoledgement
-      int packetNumber_ = Integer.parseInt(split[2]);
-      String payload_ = split[3];
-      if(packetNumber_==this.packetNumber){
-        // then we are recieving an expected ACK most likely
-        if(payload_.equals(ACK)){
-          this.packetNumber = (this.packetNumber+1)%2;
-          notify();
-        }
-        else{
-          System.out.println("Expected ACK : ");
-          System.out.println("Recieved message : " + message.toString());
-          System.out.println("Current state : "+Integer.toString(this.packetNumber));
+    else{
+      // HELLO message
+      if(this.remoteId == -1 && split[1].equals("-1") && split[2].equals(Integer.toString(this.packetNumber)) && split[3].equals(HELLO)){
+        this.remoteId = Integer.parseInt(split[0]);
+        // in this order !!
+        this.send(ACK);
+        this.packetNumber = (this.packetNumber+1)%2;
+        notify();
+      }
+      else if(this.remoteId == Integer.parseInt(split[0]) && Integer.parseInt(split[0]) == this.localId){
+        // in this case, we check if it's an acknoledgement
+        int packetNumber_ = Integer.parseInt(split[2]);
+        String payload_ = split[3];
+        if(packetNumber_==this.packetNumber){
+          // then we are recieving an expected ACK most likely
+          if(payload_.equals(ACK)){
+            this.packetNumber = (this.packetNumber+1)%2;
+            notify();
+          }
+          else if(this.debug){
+            System.out.println("Expected ACK : ");
+            System.out.println("Recieved message : " + message.toString());
+            System.out.println("Current state : "+Integer.toString(this.packetNumber));
+          }
         }
       }
     }
@@ -112,7 +117,7 @@ public class ConnectedHandler extends Handler {
   public synchronized void send(final String payload) {    
     String tmp_payload = "";
     if(payload.equals(HELLO)){
-      tmp_payload = Integer.toString(this.localId)+";"+"-1;0"+payload;
+      tmp_payload = Integer.toString(this.localId)+";"+"-1;0"+";"+payload;
     }
     else{
       tmp_payload = Integer.toString(this.localId)+";"+Integer.toString(this.remoteId)+";"+Integer.toString(this.packetNumber)+";"+payload;
@@ -138,10 +143,9 @@ public class ConnectedHandler extends Handler {
         public void run() {
           count +=1;
           handler_.send(formatted_payload, destination_);          
-          if(count>MAX_REPEAT){
-            this.cancel();
-            notify(); // to break WAITING mode of send
-          }
+          //if(count>MAX_REPEAT){
+          //  this.handle(Message( Integer.toString(this.localId)+";"+Integer.toString(this.remoteId)+";"+Integer.toString(this.packetNumber)+";"+ACK,));
+          //}
         }
       };
       TIMER.schedule(task, new Date(), DELAY);
@@ -150,7 +154,7 @@ public class ConnectedHandler extends Handler {
       wait();
     }
     catch(InterruptedException e){
-      System.err.println(e.getMessage());
+      if(this.debug) System.err.println(e.getMessage());
     }
     task.cancel();
     TIMER.purge();
@@ -165,7 +169,7 @@ public class ConnectedHandler extends Handler {
   public void close() {
     // TO BE COMPLETED
     TIMER.cancel();
-    System.err.println("ConnectedHandler closed");
+    if (this.debug) System.err.println("ConnectedHandler closed");
     super.close();
   }
 }
