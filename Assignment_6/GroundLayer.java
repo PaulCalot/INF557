@@ -98,7 +98,9 @@ public class GroundLayer {
   public static void send(String payload, SocketAddress destinationAddress) {
     if (Math.random() <= RELIABILITY) {
       // MUST SEND
+      System.out.println("Coucou_rela \n");
       try{
+        System.out.println("Coucou\n");
 //        byte[] sendBuffer = CONVERTER.encode(payload).array();
         byte[] sendBuffer = payload.getBytes(CONVERTER);
 
