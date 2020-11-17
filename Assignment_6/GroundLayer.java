@@ -46,23 +46,38 @@ public class GroundLayer {
         while(!Thread.currentThread().isInterrupted()){
           try{
             byte[] recvBuffer = new byte[1024];
-            // link DatagramSocket: https://docs.oracle.com/javase/7/docs/api/java/net/DatagramSocket.html
-            // link DatagramPacket: https://docs.oracle.com/javase/7/docs/api/java/net/DatagramPacket.html
-            // we make a packet to recieve the packet send via the socket.
             DatagramPacket UDPPacket = new DatagramPacket(recvBuffer, recvBuffer.length);
             localSocket.receive(UDPPacket);
 
             String payload;
+            payload = new String(UDPPacket.getData(), 0, UDPPacket.getLength(), CONVERTER);
+            /*
+            payload = new String(UDPPacket.getData(), "utf-8");
+            payload = payload.substring(0, UDPPacket.getLength());
+          
+            if(UDPPacket.getLength()>=2){
+              if(payload.charAt(UDPPacket.getLength()-1) == '\0' && payload.charAt(UDPPacket.getLength()-3) == '\0'){
+                if((UDPPacket.getData()[0]==-1) && (UDPPacket.getData()[1]==-2)){
+                  if(DEBUG) System.out.println("utf-16");
+                  payload = new String(UDPPacket.getData(), "utf-16");
+                  payload = payload.substring(0, UDPPacket.getLength()/2);
+                }
+                else{
+                  if(DEBUG) System.out.println("utf-16le");
+                  payload = new String(UDPPacket.getData(), "utf-16le");
+                  payload = payload.substring(0, UDPPacket.getLength()/2);
+                }
+              }
+              else if(payload.charAt(UDPPacket.getLength()-2) == '\0' && payload.charAt(UDPPacket.getLength()-4) == '\0'){
+                if(DEBUG) System.out.println("utf-16be");
+                payload = new String(UDPPacket.getData(), "utf-16be");
+                payload = payload.substring(0, UDPPacket.getLength()/2);
+              }
+            }*/
 
-            // upon recieving the UDDPacket, it was most likely sent in utf-8, 
-            // but anyway it's bytes so we don't care right ?
-            // and we recieve it with the default encoding of our system
-            payload = new String(UDPPacket.getData(),0, UDPPacket.getLength(), CONVERTER); //, "utf-8"
-            //payload = payload.substring(0, UDPPacket.getLength());
 
             if(DEBUG) System.out.print("payload: " + payload + " " + payload.length() + " ");
-            //for (Handler above : handler.upsideHandlers.values())
-            // above.receive(new Message(payload, UDPPacket.getSocketAddress().toString()));
+            
             handler.receive(new Message(payload, UDPPacket.getSocketAddress().toString()));
           }
           catch(SocketException e){
@@ -81,12 +96,11 @@ public class GroundLayer {
   }
 
   public static void send(String payload, SocketAddress destinationAddress) {
-    if (Math.random() <= RELIABILITY) {
+    //if (Math.random() <= RELIABILITY) {
       // MUST SEND
       try{
-      // byte[] sendBuffer = CONVERTER.encode(payload).array();
         byte[] sendBuffer = payload.getBytes(CONVERTER);
-        // we converted to utf-8 and we are now sending it
+
         DatagramPacket UDPPacket = new DatagramPacket(sendBuffer, sendBuffer.length, destinationAddress);
         if(DEBUG) System.out.println(sendBuffer.length);
         localSocket.send(UDPPacket);
@@ -98,7 +112,7 @@ public class GroundLayer {
         System.err.println(e.getMessage());
       }
 
-    }
+    //}
   }
 
   public static void close() {
