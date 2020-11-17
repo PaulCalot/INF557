@@ -78,41 +78,62 @@ public class ConnectedHandler extends Handler {
     // 3. HELLO : destinationId;-1;packetNumber;--HELLO--
 
     String payload = message.payload;
+    String sourceAddress = message.sourceAddress;
 
     String[] split = payload.split(";");
     if(split.length != 4){
       if (this.debug) System.err.println("Message not corresponding to expected pattern ... " + message.toString());
     }
     else{
-        // If we receive an ACK for the connexion setup
-        if(this.localId==Integer.parseInt(split[1]) && split[2].equals("0") && split[3].trim().equals(ACK) && (remoteId==-1 || remoteId == Integer.parseInt(split[0]))){
-            this.remoteId = Integer.parseInt(split[0]);
-            if(debug) System.out.println("First ACK received...");
-            synchronized(this){
-                notify();
-            }
+      // HELLO message
+      if(this.remoteId == -1 && split[1].equals("-1") && split[2].equals(Integer.toString(this.packetNumber)) && split[3].equals(HELLO)){
+        this.remoteId = Integer.parseInt(split[0]);
+        synchronized(this) {
+            notify();
         }
-
-        // If we receive an HELLO for the connexion setup
-        else if(split[1].equals("-1") && split[2].equals("0") && split[3].trim().equals(HELLO)){
-            if(debug) System.out.println("HELLO Received... Send ACK...");
-            this.remoteId = Integer.parseInt(split[0]);
-            send(ACK);
+        this.send(ACK);
+      }
+      else if(Integer.parseInt(split[1]) == this.localId){
+        this.remoteId = Integer.parseInt(split[0]);
+        int packetNumber_ = Integer.parseInt(split[2]);
+        String payload_ = split[3].substring(0, split[3].length()-1);
+        if(packetNumber_==this.packetNumber){
+            if(debug) System.out.println("Right packet_number");
+          // then we are recieving an expected ACK most likely
+            if(payload_.equals(ACK)){
+                synchronized(this) {
+                    notify();
+                }
+                if(debug) System.out.println("ACK received");
+                this.packetNumber++;
+          }
+          else if(this.remoteId == Integer.parseInt(split[0]) && Integer.parseInt(split[1]) == this.localId && split[2].equals(Integer.toString(this.packetNumber))){
+            this.send(ACK);
+          }
+      /*    else if(this.debug){
+            System.out.println("Expected ACK : ");
+            System.out.println("Recieved message : " + message.toString());
+            System.out.println("Current state : "+Integer.toString(this.packetNumber));
+          }*/
         }
+        else{
+            if(debug) System.out.println("Wrong packet_number");
+        }
+      }
     }
-
   }
 
 
   @Override
-  public void send(final String payload) {
+  public synchronized void send(final String payload) {
     if(!payload.equals(ACK)){
       String formatted_payload = Integer.toString(this.localId)+";"+Integer.toString(this.remoteId)+";"+Integer.toString(this.packetNumber)+";"+payload;
 
       Handler handler_ = this.under;
+//      under.send(formatted_payload, this.destination);
       
       TimerTask task = new TimerTask(){
-      int count = 0;
+          int count = 0;
           @Override
           public void run() {
             count +=1;
@@ -123,13 +144,11 @@ public class ConnectedHandler extends Handler {
           }
         };
         TIMER.schedule(task, new Date(), DELAY);
-      synchronized(this){
-        try {
-            wait();
-        }
+      try {
+          wait();
+      }
       catch(InterruptedException e){
         if(this.debug) System.err.println(e.getMessage());
-      }
       }
       task.cancel();
     }
@@ -151,7 +170,7 @@ public class ConnectedHandler extends Handler {
   public void close() {
     // TO BE COMPLETED
     //TIMER.cancel();
-    if (this.debug) System.out.println("ConnectedHandler closed");
+    if (this.debug) System.err.println("ConnectedHandler closed");
     super.close();
   }
 }

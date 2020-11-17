@@ -96,12 +96,9 @@ public class GroundLayer {
   }
 
   public static void send(String payload, SocketAddress destinationAddress) {
-    if (Math.random() <= RELIABILITY) {
+    //if (Math.random() <= RELIABILITY) {
       // MUST SEND
-      System.out.println("Coucou_rela \n");
       try{
-        System.out.println("Coucou\n");
-//        byte[] sendBuffer = CONVERTER.encode(payload).array();
         byte[] sendBuffer = payload.getBytes(CONVERTER);
 
         DatagramPacket UDPPacket = new DatagramPacket(sendBuffer, sendBuffer.length, destinationAddress);
@@ -115,7 +112,7 @@ public class GroundLayer {
         System.err.println(e.getMessage());
       }
 
-    }
+    //}
   }
 
   public static void close() {
