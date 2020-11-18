@@ -24,6 +24,8 @@
 *.png
 *.ipynb
 *.pickle
+*.sh
+ip
 
 # Swap files
 .*

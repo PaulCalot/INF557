@@ -22,7 +22,7 @@ public class ConnectedHandler extends Handler {
    */
 
   /** delay before retransmitting a non acked message */
-  private static final int DELAY = 3000;
+  private static final int DELAY = 300;
 
   /** number of times a non acked message is sent before timeout */
   private static final int MAX_REPEAT = 10;
@@ -37,7 +37,8 @@ public class ConnectedHandler extends Handler {
   private Handler aboveHandler;
   private int remoteId;
   private int packetNumber;
-  private Handler under;
+  private int hello_received=0;
+  private int ack_received=0;
   /**
    * Initializes a new connected handler with the specified parameters
    * 
@@ -55,7 +56,6 @@ public class ConnectedHandler extends Handler {
     this.destination = _destination;
     this.remoteId = -1;
     this.packetNumber = 0;
-    this.under = _under;
     send(HELLO);
   }
 
@@ -84,21 +84,43 @@ public class ConnectedHandler extends Handler {
       if (this.debug) System.err.println("Message not corresponding to expected pattern ... " + message.toString());
     }
     else{
-        // If we receive an ACK for the connexion setup
-        if(this.localId==Integer.parseInt(split[1]) && split[2].equals("0") && split[3].trim().equals(ACK) && (remoteId==-1 || remoteId == Integer.parseInt(split[0]))){
-            this.remoteId = Integer.parseInt(split[0]);
-            if(debug) System.out.println("First ACK received...");
-            synchronized(this){
-                notify();
+        int rId = Integer.parseInt(split[0]);
+        int lId = Integer.parseInt(split[1]);
+        int pN = Integer.parseInt(split[2]);
+        String rpayload = split[3].trim();
+
+        if(this.localId==lId && rpayload.equals(ACK) && this.packetNumber==pN){
+            if(!(this.remoteId != -1 && this.remoteId != rId)){
+                if(this.remoteId==-1) this.remoteId = rId;
+                if(debug) System.out.println("Message received: " + message.payload + "\n");
+                synchronized(this){
+                    ack_received=1;
+                    notify();
+                }
             }
         }
 
-        // If we receive an HELLO for the connexion setup
-        else if(split[1].equals("-1") && split[2].equals("0") && split[3].trim().equals(HELLO)){
-            if(debug) System.out.println("HELLO Received... Send ACK...");
-            this.remoteId = Integer.parseInt(split[0]);
-            send(ACK);
+        else if(lId==-1 && pN==0 && rpayload.equals(HELLO)){
+            if(debug) System.out.println("Message received: " + message.payload + "\n");
+            if(this.remoteId==-1 || this.remoteId == rId){
+                this.remoteId = rId;
+                String ack_payload = this.localId+";"+this.remoteId+";0;--ACK--";
+                this.downside.send(ack_payload, destination);
+                if(debug) System.out.println("Message send " + ack_payload + "\n");
+                synchronized(this){
+                    hello_received=1;
+                    notify();
+                }
+            }
+            else{
+                if(this.remoteId!= rId){
+                  String other_ack = this.localId+";"+rId+";0;--ACK--";
+                  this.downside.send(other_ack, destination);
+                  if(debug) System.out.println("Message send " + other_ack + "\n");
+                }
+            }
         }
+        
     }
 
   }
@@ -106,40 +128,41 @@ public class ConnectedHandler extends Handler {
 
   @Override
   public void send(final String payload) {
-    if(!payload.equals(ACK)){
       String formatted_payload = Integer.toString(this.localId)+";"+Integer.toString(this.remoteId)+";"+Integer.toString(this.packetNumber)+";"+payload;
 
-      Handler handler_ = this.under;
+      Handler handler_ = this.downside;
       
       TimerTask task = new TimerTask(){
-      int count = 0;
           @Override
           public void run() {
-            count +=1;
             handler_.send(formatted_payload, destination);          
-            //if(count>MAX_REPEAT){
-            //  this.handle(Message( Integer.toString(this.localId)+";"+Integer.toString(this.remoteId)+";"+Integer.toString(this.packetNumber)+";"+ACK,));
-            //}
+            if(debug) System.out.println("Message send " + formatted_payload + "\n");
           }
-        };
-        TIMER.schedule(task, new Date(), DELAY);
+      };
+      TIMER.schedule(task, new Date(), DELAY);
       synchronized(this){
-        try {
-            wait();
-        }
-      catch(InterruptedException e){
-        if(this.debug) System.err.println(e.getMessage());
-      }
+          while(ack_received==0){
+              try {
+                      wait();
+                  }
+              catch(InterruptedException e){
+                  if(this.debug) System.err.println(e.getMessage());
+              }
+          }
       }
       task.cancel();
-    }
-    else if(payload.equals(ACK)){
-      String ack_payload = Integer.toString(this.localId)+";"+Integer.toString(this.remoteId)+";"+Integer.toString(this.packetNumber)+";"+payload;
-      this.under.send(ack_payload, destination);
-      if(debug) System.out.println("ACK send");
-      this.packetNumber++;
-    }
+      synchronized(this){
+          while(hello_received==0 && payload.equals(HELLO)){
+              try {
+                  wait();
+              }
+              catch(InterruptedException e){
+                  if(this.debug) System.err.println(e.getMessage());
+              }
+          }
+      }
       TIMER.purge();
+      this.packetNumber++;
   }
 
   @Override
