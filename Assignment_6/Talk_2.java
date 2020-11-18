@@ -24,8 +24,8 @@ public class Talk_2 {
       System.err.println(e.getMessage());
       return;
     }
-    Handler connected = new ConnectedHandler(ground,321321, args[1]);
-        /*ConnectedHandler.getUniqueID(), args[1]);*/
+    Handler connected = new ConnectedHandler(ground,ConnectedHandler.getUniqueID(), args[1]);
+        /*321321, args[1]);*/
     Handler myTalk = new ConnectedTerminal(connected);
     Scanner sc = new Scanner(System.in);
     while (sc.hasNextLine()) {

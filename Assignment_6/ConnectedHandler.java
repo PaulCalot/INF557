@@ -31,7 +31,7 @@ public class ConnectedHandler extends Handler {
   private static final Timer TIMER = new Timer("ConnectedHandler's Timer",
       true);
 
-  private final boolean debug = false;
+  private final boolean debug = true;
   private final int localId;
   private final String destination;
   private Handler aboveHandler;
@@ -76,7 +76,7 @@ public class ConnectedHandler extends Handler {
     // 1. ACK : destinationId;senderId;packetNumber;--ACK--
     // 2. PACKET : destinationId;senderId;packetNumber;payload
     // 3. HELLO : destinationId;-1;packetNumber;--HELLO--
-
+    if(debug) System.out.println("recieved : " + message.toString());
     String payload = message.payload;
 
     String[] split = payload.split(";");
@@ -85,6 +85,7 @@ public class ConnectedHandler extends Handler {
     }
     else{
         // If we receive an ACK for the connexion setup
+        // returns the packet number if  it's is now expected right ?
         if(this.localId==Integer.parseInt(split[1]) && split[2].equals("0") && split[3].trim().equals(ACK) && (remoteId==-1 || remoteId == Integer.parseInt(split[0]))){
             this.remoteId = Integer.parseInt(split[0]);
             if(debug) System.out.println("First ACK received...");
@@ -92,15 +93,20 @@ public class ConnectedHandler extends Handler {
                 notify();
             }
         }
-
         // If we receive an HELLO for the connexion setup
         else if(split[1].equals("-1") && split[2].equals("0") && split[3].trim().equals(HELLO)){
             if(debug) System.out.println("HELLO Received... Send ACK...");
             this.remoteId = Integer.parseInt(split[0]);
             send(ACK);
         }
-    }
 
+        else if(this.localId==Integer.parseInt(split[1]) && this.remoteId == Integer.parseInt(split[0])){
+          if(this.packetNumber==Integer.parseInt(split[2])){
+            // do something with the payload (may be send it above, if we did not yet recieved it)
+            this.send(ACK);
+          }
+        }
+    }
   }
 
 
@@ -115,6 +121,8 @@ public class ConnectedHandler extends Handler {
       int count = 0;
           @Override
           public void run() {
+            if(debug)System.out.println("Sending " + formatted_payload + " for the " + count + "th times.");
+
             count +=1;
             handler_.send(formatted_payload, destination);          
             //if(count>MAX_REPEAT){
