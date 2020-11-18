@@ -31,7 +31,7 @@ public class ConnectedHandler extends Handler {
   private static final Timer TIMER = new Timer("ConnectedHandler's Timer",
       true);
 
-  private final boolean debug = false;
+  private final boolean debug = true;
   private final int localId;
   private final String destination;
   private Handler aboveHandler;
@@ -72,11 +72,6 @@ public class ConnectedHandler extends Handler {
 
   @Override
   public void handle(Message message) {
-    // message is of the form : 
-    // 1. ACK : destinationId;senderId;packetNumber;--ACK--
-    // 2. PACKET : destinationId;senderId;packetNumber;payload
-    // 3. HELLO : destinationId;-1;packetNumber;--HELLO--
-
     String payload = message.payload;
 
     String[] split = payload.split(";");
@@ -87,7 +82,7 @@ public class ConnectedHandler extends Handler {
         int rId = Integer.parseInt(split[0]);
         int lId = Integer.parseInt(split[1]);
         int pN = Integer.parseInt(split[2]);
-        String rpayload = split[3].trim();
+        String rpayload = split[3];
 
         if(this.localId==lId && rpayload.equals(ACK) && this.packetNumber==pN){
             if(!(this.remoteId != -1 && this.remoteId != rId)){
@@ -131,7 +126,6 @@ public class ConnectedHandler extends Handler {
       String formatted_payload = Integer.toString(this.localId)+";"+Integer.toString(this.remoteId)+";"+Integer.toString(this.packetNumber)+";"+payload;
 
       Handler handler_ = this.downside;
-      
       TimerTask task = new TimerTask(){
           @Override
           public void run() {
@@ -140,22 +134,13 @@ public class ConnectedHandler extends Handler {
           }
       };
       TIMER.schedule(task, new Date(), DELAY);
+
       synchronized(this){
-          while(ack_received==0){
+          while(ack_received==0 || (hello_received==0 && payload.equals(HELLO))){
+              if(ack_received==1) task.cancel();
               try {
                       wait();
                   }
-              catch(InterruptedException e){
-                  if(this.debug) System.err.println(e.getMessage());
-              }
-          }
-      }
-      task.cancel();
-      synchronized(this){
-          while(hello_received==0 && payload.equals(HELLO)){
-              try {
-                  wait();
-              }
               catch(InterruptedException e){
                   if(this.debug) System.err.println(e.getMessage());
               }
@@ -173,7 +158,6 @@ public class ConnectedHandler extends Handler {
   @Override
   public void close() {
     // TO BE COMPLETED
-    //TIMER.cancel();
     if (this.debug) System.out.println("ConnectedHandler closed");
     super.close();
   }
