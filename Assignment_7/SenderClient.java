@@ -1,12 +1,13 @@
 import java.net.SocketException;
-import java.util.Scanner;
 
-public class Talk_2 {
+public class SenderClient {
 
-  public static final String SYNTAX = "syntax : java Talk_2 myPort destinationHost:destinationPort";
+  public static final String SYNTAX = "syntax : java SenderClient myPort serverHost:serverPort filename";
+
+//  private static final long DELAY = 10;
 
   public static void main(String[] args) {
-    if (args.length != 2) {
+    if (args.length != 3) {
       System.err.println(SYNTAX);
       return;
     }
@@ -16,7 +17,9 @@ public class Talk_2 {
     } catch (@SuppressWarnings("unused") NumberFormatException e) {
       System.err.println(SYNTAX);
     }
-    GroundLayer.RELIABILITY = 0.5;
+    String filename = args[2];
+
+    GroundLayer.RELIABILITY = 0.9;
     Handler ground = null;
     try {
       ground = new GroundHandler(localPort);
@@ -26,15 +29,13 @@ public class Talk_2 {
     }
     Handler connected = new ConnectedHandler(ground,
         ConnectedHandler.getUniqueID(), args[1]);
-    
-    Handler myTalk = new ConnectedTerminal(connected);
-    
-    Scanner sc = new Scanner(System.in);
-    while (sc.hasNextLine()) {
-      myTalk.send(sc.nextLine());
-    }
-    sc.close();
-    System.out.println("closing");
-    ground.close();
+    FileHandler fileHandler = new FileHandler(connected, ".");
+    // connect the two state machines
+    fileHandler.handle(new Message("GET " + filename, "local"));
+    fileHandler.letItGo();
+    System.out.println("closing Sender");
+    connected.close();
+    GroundLayer.close();
   }
+
 }

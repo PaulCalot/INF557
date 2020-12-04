@@ -22,7 +22,7 @@ public class ConnectedHandler extends Handler {
    */
 
   /** delay before retransmitting a non acked message */
-  private static final int DELAY = 3000;
+  private static final int DELAY = 300;
 
   /** number of times a non acked message is sent before timeout */
   private static final int MAX_REPEAT = 10;
@@ -32,13 +32,16 @@ public class ConnectedHandler extends Handler {
       true);
 
   private final boolean debug = true;
+  
   private final int localId;
   private final String destination;
   private Handler aboveHandler;
+
+  // to be completed
   private int remoteId;
-  private int packetNumber;
-  private int hello_received=0;
-  private int ack_received=0;
+  private int lpacketNumber;
+  private int rpacketNumber;
+  
   /**
    * Initializes a new connected handler with the specified parameters
    * 
@@ -54,8 +57,11 @@ public class ConnectedHandler extends Handler {
     super(_under, _localId, true);
     this.localId = _localId;
     this.destination = _destination;
+
+    // to be completed
     this.remoteId = -1;
-    this.packetNumber = 0;
+    this.lpacketNumber = 0;
+    this.rpacketNumber = 0;
     send(HELLO);
   }
 
@@ -76,7 +82,7 @@ public class ConnectedHandler extends Handler {
 
     String[] split = payload.split(";");
     if(split.length != 4){
-      if (this.debug) System.err.println("Message not corresponding to expected pattern ... " + message.toString());
+        if(this.debug) System.err.println("Message not corresponding to expected pattern ... " + message.toString());
     }
     else{
         int rId = Integer.parseInt(split[0]);
@@ -85,35 +91,36 @@ public class ConnectedHandler extends Handler {
         String rpayload = split[3].trim();
 
 
-        if(hello_received>0 && this.localId==lId && rpayload.equals(ACK) && this.packetNumber==pN && this.remoteId==rId){
-
-                if(debug) System.out.println("Message received: " + message.payload + "\n");
-                synchronized(this){
-                    ack_received=1;
-                    notify();
-                }
+        if(this.localId==lId && rpayload.equals(ACK) && this.lpacketNumber==pN && this.remoteId==rId){
+          if(debug) System.out.println("Message received: " + message.payload + "\n");
+          synchronized(this){
+              notify();
+          }
         }
 
         else if(lId==-1 && pN==0 && rpayload.equals(HELLO)){
-            this.remoteId = rId;
-            if(debug) System.out.println("hello received: " + message.payload + "\n");
-            String ack_payload = this.localId+";"+this.remoteId+";"+pN+";--ACK--";
-            this.downside.send(ack_payload, destination);
-            if(debug) System.out.println("Message sent " + ack_payload + "\n");
-            hello_received+=1;
+          if(remoteId==-1) {
+              rpacketNumber++;
+              this.remoteId = rId;
+          }
+          if(debug) System.out.println("hello received: " + message.payload + "\n");
+          
+          String ack_payload = this.localId+";"+rId+";"+pN+";--ACK--";
+          this.downside.send(ack_payload, destination);
+          if(debug) System.out.println("Message sent " + ack_payload + "\n");
         }
         else{
             if(debug) System.out.println("Message dropped: " + message.payload + "\n");
         }
-        
-    }
 
+    }
   }
 
 
   @Override
   public void send(final String payload) {
-      String formatted_payload = Integer.toString(this.localId)+";"+Integer.toString(this.remoteId)+";"+Integer.toString(this.packetNumber)+";"+payload;
+    if(payload.equals(HELLO)){
+      String formatted_payload = this.localId+";"+this.remoteId+";0;--HELLO--";
 
       Handler handler_ = this.downside;
       TimerTask task = new TimerTask(){
@@ -124,18 +131,19 @@ public class ConnectedHandler extends Handler {
           }
       };
       TIMER.schedule(task, new Date(), DELAY);
-      synchronized(this){
-          while(ack_received==0){
-          try{
+      
+      while (rpacketNumber == 0) {  // Wait for an hello
+        synchronized (this) {
+          try {
             wait();
-          }
-          catch(InterruptedException e){}
-          }
+          } catch (InterruptedException e) {}
+        }
       }
-    task.cancel();
-    TIMER.purge();
-          
-      this.packetNumber++;
+      lpacketNumber++;
+    
+      task.cancel();
+      TIMER.purge(); 
+    }
   }
 
   @Override
