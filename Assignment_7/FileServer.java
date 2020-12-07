@@ -39,7 +39,7 @@ public class FileServer {
         @Override
         public void run() {
           Handler connected = new ConnectedHandler(dispatcher,
-              ConnectedHandler.getUniqueID(), parameters.getRemoteAddress());
+          ConnectedHandler.getUniqueID(), parameters.getRemoteAddress());
           FileHandler fileHandler = new FileHandler(connected, rootDir);
           fileHandler.letItGo();
           connected.close();

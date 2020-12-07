@@ -23,11 +23,12 @@ public class ReceiverClient {
     try {
       ground = new GroundHandler(localPort);
     } catch (SocketException e) {
+      System.err.println("Socket Exception");
       System.err.println(e.getMessage());
       return;
     }
     Handler connected = new ConnectedHandler(ground,
-        ConnectedHandler.getUniqueID(), args[1]);
+        2, args[1]);
     FileHandler fileHandler = new FileHandler(connected, destDir);
     // connect the two state machines
     connected.send("GET " + filename);
