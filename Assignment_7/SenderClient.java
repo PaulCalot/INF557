@@ -29,7 +29,7 @@ public class SenderClient {
       return;
     }
     Handler connected = new ConnectedHandler(ground,
-        3, args[1]); // ConnectedHandler.getUniqueID()
+      ConnectedHandler.getUniqueID(), args[1]); // ConnectedHandler.getUniqueID()
     FileHandler fileHandler = new FileHandler(connected, ".");
     // connect the two state machines
     fileHandler.handle(new Message("GET " + filename, "local"));

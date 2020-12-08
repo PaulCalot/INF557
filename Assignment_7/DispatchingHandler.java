@@ -1,7 +1,9 @@
 // Paul CALOT && Philippe SAGBO
 import java.util.concurrent.ArrayBlockingQueue;
+import java.util.HashSet;
 import java.util.HashMap;
-
+import java.util.concurrent.ConcurrentHashMap;
+//import java.util.concurrent.ConcurrentSkipListMap;
 public class DispatchingHandler extends Handler {
 
   /** one will need it */
@@ -13,10 +15,13 @@ public class DispatchingHandler extends Handler {
   /** the queue for pending connections */
   private final ArrayBlockingQueue<ConnectionParameters> queue;
 
+
   // to be completed
   private HashMap<String, Integer> ID_addr;
 
   private static final boolean DEBUG = false;
+
+  private final HashSet<Integer> seen_addr;
 
   /**
    * Initializes a new dispatching handler with the specified parameters
@@ -32,6 +37,7 @@ public class DispatchingHandler extends Handler {
     this.queue = new ArrayBlockingQueue<ConnectionParameters>(_queueCapacity);
     // add other initializations if needed
     this.ID_addr = new HashMap<String, Integer>();
+    this.seen_addr = new HashSet<Integer>();
   }
 
   /**
@@ -60,7 +66,6 @@ public class DispatchingHandler extends Handler {
   @Override
   public void handle(Message message) {
     if(DEBUG) System.out.println("");
-
     if(DEBUG) System.out.println("START handle");
     // to be completed
     // message format : remote id, local id, port number, format
@@ -72,20 +77,19 @@ public class DispatchingHandler extends Handler {
     else{
       int rId = Integer.parseInt(split[0]);
       int lId = Integer.parseInt(split[1]);
-      int pN = Integer.parseInt(split[2]);
+      //int pN = Integer.parseInt(split[2]);
       String rpayload = split[3].trim();
 
       if (rpayload.equals("--ACK--")){
         if(DEBUG) System.err.println("Recieved ACK");
         ID_addr.put(message.sourceAddress, lId); // this is how we should do it - saving the unique local ID we could not get before ...
+        //seen_addr.remove(rId);
       }
-      if(pN==0 && rpayload.equals(HELLO)){
-        if(lId == -1 && !ID_addr.containsKey(message.sourceAddress) && !queue.contains(new ConnectionParameters(rId, message.sourceAddress))){
-          // first hello 
+      if(rpayload.equals(HELLO)){
+        if(!seen_addr.contains(rId)){
           try{
             queue.add(new ConnectionParameters(rId, message.sourceAddress)); // queue already synchronized
-            
-            //this.send(,message.sourceAddress);
+            seen_addr.add(rId);
             if(DEBUG) System.err.println("ADDING TO THE QUEUE");
           }
           catch(IllegalStateException e){
@@ -93,15 +97,15 @@ public class DispatchingHandler extends Handler {
           }
         }
       }
-      try{
-        if(ID_addr.get(message.sourceAddress) != null){ 
-          if(DEBUG) System.out.println("Sending message to the correct adress.");
-          upsideHandlers.get(ID_addr.get(message.sourceAddress)).receive(message);
-        }
+    }
+    try{
+      if(message.sourceAddress!=null && ID_addr.containsKey(message.sourceAddress)){
+        if(DEBUG) System.out.println("Sending message to the correct address.");
+        upsideHandlers.get(ID_addr.get(message.sourceAddress)).receive(message);
       }
-      catch(NullPointerException e){
-        if(DEBUG) System.err.println("Source address not registered.");
-      }
+    }
+    catch(NullPointerException e){
+      if(DEBUG) System.err.println("Source address not registered.");
     }
     if(DEBUG) System.out.println("END handle");
   }
