@@ -1,0 +1,9 @@
+
+java FileServer 7778 test_reciever/
+java SenderClient 9999 localhost:7778 test1.txt
+java ReceiverClient 8888 localhost:7778 test1.txt test_reciever/
+
+javac FileServer.java
+javac ReceiverClient.java
+javac SenderClient.java
+

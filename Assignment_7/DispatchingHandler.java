@@ -80,11 +80,10 @@ public class DispatchingHandler extends Handler {
         ID_addr.put(message.sourceAddress, lId); // this is how we should do it - saving the unique local ID we could not get before ...
       }
       if(pN==0 && rpayload.equals(HELLO)){
-        if(lId == -1 && !upsideHandlers.containsKey(rId) && !queue.contains(new ConnectionParameters(rId, message.sourceAddress))){
+        if(lId == -1 && !ID_addr.containsKey(message.sourceAddress) && !queue.contains(new ConnectionParameters(rId, message.sourceAddress))){
           // first hello 
-          // pb : upsideHandlers.containsKey(rId) - we should look for the key : lId
           try{
-            queue.add(new ConnectionParameters(rId, message.sourceAddress));
+            queue.add(new ConnectionParameters(rId, message.sourceAddress)); // queue already synchronized
             
             //this.send(,message.sourceAddress);
             if(DEBUG) System.err.println("ADDING TO THE QUEUE");
@@ -93,34 +92,16 @@ public class DispatchingHandler extends Handler {
             if(DEBUG) System.err.println("Queue is full");
           }
         }
-        else{
-          // not first hello, we should send it to the right upsideHandlers
-          // may be treated by what is after ...
-          if(DEBUG) System.err.println("Getting the HELLO message to the right reciever.");
-          try{
-            if(ID_addr.get(message.sourceAddress) != null){ 
-              //upsideHandlers.get(ID_addr.get(message.sourceAddress)).receive(message);
-              upsideHandlers.get(lId).receive(message);
-              // how do we know to whom send this message ?
-            }
-          }
-          catch(NullPointerException e){
-            if(DEBUG) System.err.println("Source address not registered.");
-          }        
-        }
       }
       try{
         if(ID_addr.get(message.sourceAddress) != null){ 
           if(DEBUG) System.out.println("Sending message to the correct adress.");
-          //upsideHandlers.get(ID_addr.get(message.sourceAddress)).receive(message);
-          upsideHandlers.get(lId).receive(message);
-          // how do we know to whom send this message ?
+          upsideHandlers.get(ID_addr.get(message.sourceAddress)).receive(message);
         }
       }
       catch(NullPointerException e){
         if(DEBUG) System.err.println("Source address not registered.");
       }
-      
     }
     if(DEBUG) System.out.println("END handle");
   }
