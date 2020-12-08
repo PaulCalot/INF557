@@ -60,20 +60,35 @@ public class DispatchingHandler extends Handler {
   @Override
   public void handle(Message message) {
     // to be completed
-    if (message.payload.equals("--ACK--")){
-      String[] split = message.payload.split(";");
-        ID_addr.put(message.sourceAddress, Integer.parseInt(split[0]));
+    // message format : remote id, local id, port number, format
+    String[] split = message.payload.split(";");
+    if(split.length != 4){
+      if(DEBUG) System.err.println("Message not corresponding to expected pattern ... " + message.toString());
     }
-    if (message.payload.equals(HELLO)){
-      String[] split = message.payload.split(";");
-      try{
-        queue.add(new ConnectionParameters(Integer.parseInt(split[0]), message.sourceAddress));
-        ID_addr.put(message.sourceAddress, Integer.parseInt(split[0]));
+    else{
+      int rId = Integer.parseInt(split[0]);
+      int lId = Integer.parseInt(split[1]);
+      int pN = Integer.parseInt(split[2]);
+      String rpayload = split[3].trim();
+
+      if (rpayload.equals("--ACK--")){
+        ID_addr.put(message.sourceAddress, rId);
       }
-      catch(IllegalStateException e){
-        if(DEBUG) System.err.println("Queue is full");
+      else if (rpayload.equals(HELLO) && !upsideHandlers.containsKey(rId) && !queue.contains(new ConnectionParameters(rId, message.sourceAddress))){ // && !ID_addr.containsKey(message.sourceAddress) && !queue.contains(new ConnectionParameters(rId, message.sourceAddress))){
+        try{
+          queue.add(new ConnectionParameters(rId, message.sourceAddress));
+          ID_addr.put(message.sourceAddress, rId);
+        }
+        catch(IllegalStateException e){
+          if(DEBUG) System.err.println("Queue is full");
+        }
       }
     }
-    if(ID_addr.get(message.sourceAddress) != null) upsideHandlers.get(ID_addr.get(message.sourceAddress)).receive(message);
+    try{
+      if(ID_addr.get(message.sourceAddress) != null) upsideHandlers.get(ID_addr.get(message.sourceAddress)).receive(message);
+    }
+    catch(NullPointerException e){
+      if(DEBUG) System.err.println("Source address not registred.");
+    }
   }
 }
