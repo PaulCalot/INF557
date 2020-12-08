@@ -1,8 +1,10 @@
 // Paul CALOT && Philippe SAGBO
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.HashMap;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.ArrayList;
 //import java.util.concurrent.ConcurrentSkipListMap;
 public class DispatchingHandler extends Handler {
 
@@ -22,6 +24,7 @@ public class DispatchingHandler extends Handler {
   private static final boolean DEBUG = false;
 
   private final HashSet<Integer> seen_addr;
+  private final LinkedList<Message> hellos_waiting_to_be_sent;
 
   /**
    * Initializes a new dispatching handler with the specified parameters
@@ -38,6 +41,7 @@ public class DispatchingHandler extends Handler {
     // add other initializations if needed
     this.ID_addr = new HashMap<String, Integer>();
     this.seen_addr = new HashSet<Integer>();
+    this.hellos_waiting_to_be_sent = new LinkedList<Message>();
   }
 
   /**
@@ -67,6 +71,27 @@ public class DispatchingHandler extends Handler {
   public void handle(Message message) {
     if(DEBUG) System.out.println("");
     if(DEBUG) System.out.println("START handle");
+
+
+    // -------- test ------------
+
+    if(DEBUG) System.out.println("Sending saved hellos");
+    for(int k = 0; k<hellos_waiting_to_be_sent.size(); k++){
+      Message local_message = hellos_waiting_to_be_sent.pop();
+      try{
+        if(local_message.sourceAddress!=null && ID_addr.containsKey(local_message.sourceAddress)){
+          if(DEBUG) System.out.println("Sending saved hellos to the correct address.");
+          upsideHandlers.get(ID_addr.get(local_message.sourceAddress)).receive(local_message);
+        }
+        else{
+          hellos_waiting_to_be_sent.addLast(local_message);
+        }
+      }
+      catch(NullPointerException e){
+        if(DEBUG) System.err.println("Source address not registered.");
+      }
+    } 
+    
     // to be completed
     // message format : remote id, local id, port number, format
     if(DEBUG) System.err.println("Recieved message " + message.payload + ":" + message.sourceAddress);
@@ -85,6 +110,8 @@ public class DispatchingHandler extends Handler {
         ID_addr.put(message.sourceAddress, lId); // this is how we should do it - saving the unique local ID we could not get before ...
         //seen_addr.remove(rId);
       }
+
+
       if(rpayload.equals(HELLO)){
         if(!seen_addr.contains(rId)){
           try{
@@ -95,6 +122,11 @@ public class DispatchingHandler extends Handler {
           catch(IllegalStateException e){
             if(DEBUG) System.err.println("Queue is full");
           }
+        }
+        else{
+          if(DEBUG) System.err.println("Save 'hello' for later");
+
+          hellos_waiting_to_be_sent.addLast(message);;
         }
       }
     }
