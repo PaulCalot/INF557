@@ -24,6 +24,7 @@ public class DispatchingHandler extends Handler {
   private static final boolean DEBUG = false;
 
   private final HashSet<Integer> seen_addr;
+  private final HashSet<String> ACKS;
   private final LinkedList<Message> hellos_waiting_to_be_sent;
 
   /**
@@ -42,6 +43,7 @@ public class DispatchingHandler extends Handler {
     this.ID_addr = new HashMap<String, Integer>();
     this.seen_addr = new HashSet<Integer>();
     this.hellos_waiting_to_be_sent = new LinkedList<Message>();
+    this.ACKS = new HashSet<String>();
   }
 
   /**
@@ -102,7 +104,7 @@ public class DispatchingHandler extends Handler {
     else{
       int rId = Integer.parseInt(split[0]);
       int lId = Integer.parseInt(split[1]);
-      //int pN = Integer.parseInt(split[2]);
+      int pN = Integer.parseInt(split[2]);
       String rpayload = split[3].trim();
 
       if (rpayload.equals("--ACK--")){
@@ -110,6 +112,7 @@ public class DispatchingHandler extends Handler {
         ID_addr.put(message.sourceAddress, lId); // this is how we should do it - saving the unique local ID we could not get before ...
         try{
             upsideHandlers.get(ID_addr.get(message.sourceAddress)).receive(message);
+            ACKS.add(message.payload);
           }
         catch(NullPointerException e){
           if(DEBUG) System.err.println("Source address not registered.");
@@ -142,6 +145,17 @@ public class DispatchingHandler extends Handler {
       }
       catch(NullPointerException e){
         if(DEBUG) System.err.println("Source address not registered.");
+        if(rpayload.equals("--HELLO--")){
+          for(String ack : ACKS){
+            String[] split_ack = ack.split(";");
+            int rId2 = Integer.parseInt(split_ack[0]);
+            int lId2 = Integer.parseInt(split_ack[1]);
+            int pN2 = Integer.parseInt(split_ack[2]);
+            if(pN2==pN && lId2 == rId){
+              upsideHandlers.get(lId2).receive(message);
+            }
+          }
+        }
       }
     }
     if(DEBUG) System.out.println("END handle");

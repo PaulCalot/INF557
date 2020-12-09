@@ -83,6 +83,17 @@ public class DispatchingHandler extends Handler {
           }
           catch(NullPointerException e){
             if(DEBUG) System.err.println("Source address not registred.");
+            if(pN==0){
+              for(String ack : ACKS){
+                String[] split_ack = ack.split(";");
+                int rId2 = Integer.parseInt(split_ack[0]);
+                int lId2 = Integer.parseInt(split_ack[1]);
+                int pN2 = Integer.parseInt(split_ack[2]);
+                if(pN2==pN && lId2 == rId){
+                  upsideHandlers.get(lId2).receive(message);
+                }
+              }
+            }
           }
         }
         else{
@@ -101,6 +112,17 @@ public class DispatchingHandler extends Handler {
             }
             catch(NullPointerException e){
               if(DEBUG) System.err.println("Source address not registred.");
+              if(pN==0){
+                for(String ack : ACKS){
+                  String[] split_ack = ack.split(";");
+                  int rId2 = Integer.parseInt(split_ack[0]);
+                  int lId2 = Integer.parseInt(split_ack[1]);
+                  int pN2 = Integer.parseInt(split_ack[2]);
+                  if(pN2==pN && lId2 == rId){
+                    upsideHandlers.get(lId2).receive(message);
+                  }
+                }
+              }
             }
             HELLOS.add(message.payload);
           }
