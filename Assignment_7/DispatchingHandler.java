@@ -19,12 +19,11 @@ public class DispatchingHandler extends Handler {
 
 
   // to be completed
-  private HashMap<String, Integer> ID_addr;
+  private HashMap<Integer, Integer> ID_addr; // correspondance : rId -> lI
 
   private static final boolean DEBUG = false;
 
   private final HashSet<Integer> seen_addr;
-  private final LinkedList<Message> hellos_waiting_to_be_sent;
 
   /**
    * Initializes a new dispatching handler with the specified parameters
@@ -39,9 +38,8 @@ public class DispatchingHandler extends Handler {
     super(_under, ++counter, false);
     this.queue = new ArrayBlockingQueue<ConnectionParameters>(_queueCapacity);
     // add other initializations if needed
-    this.ID_addr = new HashMap<String, Integer>();
+    this.ID_addr = new HashMap<Integer, Integer>();
     this.seen_addr = new HashSet<Integer>();
-    this.hellos_waiting_to_be_sent = new LinkedList<Message>();
   }
 
   /**
@@ -69,76 +67,65 @@ public class DispatchingHandler extends Handler {
 
   @Override
   public void handle(Message message) {
-    if(DEBUG) System.out.println("");
-    if(DEBUG) System.out.println("START handle");
-
-
     // -------- test ------------
-
-    if(DEBUG) System.out.println("Sending saved hellos");
-    for(int k = 0; k<hellos_waiting_to_be_sent.size(); k++){
-      Message local_message = hellos_waiting_to_be_sent.pop();
-      try{
-        if(local_message.sourceAddress!=null && ID_addr.containsKey(local_message.sourceAddress)){
-          if(DEBUG) System.out.println("Sending saved hellos to the correct address.");
-          upsideHandlers.get(ID_addr.get(local_message.sourceAddress)).receive(local_message);
-        }
-        else{
-          hellos_waiting_to_be_sent.addLast(local_message);
-        }
-      }
-      catch(NullPointerException e){
-        if(DEBUG) System.err.println("Source address not registered.");
-      }
-    } 
-    
-    // to be completed
     // message format : remote id, local id, port number, format
-    if(DEBUG) System.err.println("Recieved message " + message.payload + ":" + message.sourceAddress);
     String[] split = message.payload.split(";");
     if(split.length != 4){
       if(DEBUG) System.err.println("Message not corresponding to expected pattern ... " + message.toString());
     }
+
     else{
       int rId = Integer.parseInt(split[0]);
       int lId = Integer.parseInt(split[1]);
-      //int pN = Integer.parseInt(split[2]);
       String rpayload = split[3].trim();
 
-      if (rpayload.equals("--ACK--")){
-        if(DEBUG) System.err.println("Recieved ACK");
-        ID_addr.put(message.sourceAddress, lId); // this is how we should do it - saving the unique local ID we could not get before ...
-        //seen_addr.remove(rId);
+      if(rpayload.equals("--ACK--")){ // handling --ACK--
+        boolean valid_ack = true;
+        try{
+          upsideHandlers.get(lId).receive(message);   // if this does not work, then we should add it.
+        }
+        catch(NullPointerException e){
+          valid_ack = false;
+        }
+        if(valid_ack) ID_addr.put(rId, lId); 
       }
 
-
-      if(rpayload.equals(HELLO)){
-        if(!seen_addr.contains(rId)){
+      else if(rpayload.equals(HELLO)){ // handing --HELLO--
+        if(!seen_addr.contains(rId)){ // first hello
+          boolean queue_full = false;
           try{
             queue.add(new ConnectionParameters(rId, message.sourceAddress)); // queue already synchronized
-            seen_addr.add(rId);
-            if(DEBUG) System.err.println("ADDING TO THE QUEUE");
           }
           catch(IllegalStateException e){
-            if(DEBUG) System.err.println("Queue is full");
+            queue_full=true;
+          }
+          if(!queue_full){
+            seen_addr.add(rId);
           }
         }
-        else{
-          if(DEBUG) System.err.println("Save 'hello' for later");
-
-          hellos_waiting_to_be_sent.addLast(message);;
+        else{ // not first hello
+          try{
+            upsideHandlers.get(lId).receive(message); 
+          }
+          catch(NullPointerException e){
+            try{
+              upsideHandlers.get(ID_addr.get(rId)).receive(message); 
+            }
+            catch(NullPointerException ee){
+                // we are dropping it
+            }
+          }
+          
+        }
+      }
+      else{ // handling other messages
+        try{
+          upsideHandlers.get(lId).receive(message);
+        }
+        catch(NullPointerException e){
+          if(DEBUG) System.err.println("Source address not registered.");
         }
       }
     }
-    try{
-      if(message.sourceAddress!=null && ID_addr.containsKey(message.sourceAddress)){
-        if(DEBUG) System.out.println("Sending message to the correct address.");
-        upsideHandlers.get(ID_addr.get(message.sourceAddress)).receive(message);
-      }
-    }
-    catch(NullPointerException e){
-      if(DEBUG) System.err.println("Source address not registered.");
-    }
-    if(DEBUG) System.out.println("END handle");
   }
 }

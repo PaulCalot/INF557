@@ -84,6 +84,7 @@ public class ConnectedHandler extends Handler {
       if (this.debug) System.err.println("Message not corresponding to expected pattern ... " + message.toString());
     }
     else{
+    
         // If we receive an ACK for the connexion setup
         // returns the packet number if  it's is now expected right ?
         if(this.localId==Integer.parseInt(split[1]) && split[2].equals("0") && split[3].trim().equals(ACK) && (remoteId==-1 || remoteId == Integer.parseInt(split[0]))){

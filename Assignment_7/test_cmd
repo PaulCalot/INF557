@@ -1,7 +1,7 @@
 
-java FileServer 7778 test_reciever/
-java SenderClient 9999 localhost:7778 test1.txt
-java ReceiverClient 8888 localhost:7778 test1.txt test_reciever/
+java FileServer 7777 test_reciever/
+java SenderClient 9999 localhost:7777 test1.txt
+java ReceiverClient 8888 localhost:7777 test1.txt dest/
 
 javac FileServer.java
 javac ReceiverClient.java
