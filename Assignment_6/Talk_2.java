@@ -16,7 +16,7 @@ public class Talk_2 {
     } catch (@SuppressWarnings("unused") NumberFormatException e) {
       System.err.println(SYNTAX);
     }
-    GroundLayer.RELIABILITY = 0.5;
+    GroundLayer.RELIABILITY = 0.9;
     Handler ground = null;
     try {
       ground = new GroundHandler(localPort);
@@ -29,7 +29,9 @@ public class Talk_2 {
     Handler myTalk = new ConnectedTerminal(connected);
     Scanner sc = new Scanner(System.in);
     while (sc.hasNextLine()) {
-      myTalk.send(sc.nextLine());
+      String msg = sc.nextLine();
+      System.out.println("Send message " + msg);
+      myTalk.send(msg);
     }
     sc.close();
     System.out.println("closing");
