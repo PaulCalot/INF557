@@ -74,7 +74,7 @@ public class ConnectedHandler extends Handler {
 
   @Override
   public void handle(Message message) {
-    // message is of the form : 
+    // message is of the form :
     // 1. ACK : destinationId;senderId;packetNumber;--ACK--
     // 2. PACKET : destinationId;senderId;packetNumber;payload
     // 3. HELLO : destinationId;-1;packetNumber;--HELLO--
